@@ -5,21 +5,59 @@
     <title>Map</title>
 </head>
 <body>
+<!--tr th:each="point : ${points}">
+    <td th:text="${point.x}">Text ...</td>
+</tr-->
 <div id="Map" class="map"></div>
 <script src="https://openlayers.org/en/v4.6.5/build/ol.js"></script>
 <script th:inline="javascript">
+    /*<![CDATA[*/
+
+    var pointsFeatures = [];
+    var pointList = [[${points}]]
+    for (var i = 0; i < pointList.length; i++) {
+        var lat = pointList[i].x;
+        var lon = pointList[i].y;
+
+        var feature = new ol.Feature({
+    		geometry: new ol.geom.Point(ol.proj.transform([lon, lat], 'EPSG:4326', 'EPSG:3857')),
+	    });
+        feature.setStyle(new ol.style.Style({
+                image: new ol.style.Circle({
+                    radius: 10,
+                    stroke: new ol.style.Stroke({
+                        color: '#fff'
+                    }),
+                    fill: new ol.style.Fill({
+                        color: '#555'
+                    })
+                })
+            }));
+        pointsFeatures.push(feature);
+    }
+
+    var pointsSource = new ol.source.Vector({
+        features: pointsFeatures
+    });
+
+    var points = new ol.layer.Vector({
+        source: pointsSource
+    });
+
  	var raster = new ol.layer.Tile({
-        	source: new ol.source.OSM()
-        });
-    	var map = new ol.Map({
-            layers: [raster],
-            target: 'Map',
-            view: new ol.View({
-                center: ol.proj.fromLonLat([19.938618, 50.060601]),
-                zoom: 12
-            })
-        });
+    	source: new ol.source.OSM()
+    });
+
+    var map = new ol.Map({
+        layers: [raster, points],
+        target: 'Map',
+        view: new ol.View({
+            center: ol.proj.fromLonLat([19.938618, 50.060601]),
+            zoom: 12
+        })
+    });
+
+    /*]]>*/
 </script>
-</div>
 </body>
 </html>
