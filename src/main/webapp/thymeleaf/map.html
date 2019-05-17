@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>Map</title>
+</head>
+<body>
+<div id="Map" class="map"></div>
+<script src="https://openlayers.org/en/v4.6.5/build/ol.js"></script>
+<script th:inline="javascript">
+ 	var raster = new ol.layer.Tile({
+        	source: new ol.source.OSM()
+        });
+    	var map = new ol.Map({
+            layers: [raster],
+            target: 'Map',
+            view: new ol.View({
+                center: ol.proj.fromLonLat([19.938618, 50.060601]),
+                zoom: 12
+            })
+        });
+</script>
+</div>
+</body>
+</html>
