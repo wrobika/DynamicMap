@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.springframework</groupId>
-    <artifactId>gs-serving-web-content</artifactId>
+    <artifactId>dynamic-map</artifactId>
     <version>0.1.0</version>
 
     <parent>
@@ -27,10 +27,28 @@
             <artifactId>spring-boot-devtools</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>org.datasyslab</groupId>
+            <artifactId>geospark</artifactId>
+            <version>${geospark.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-core_${scala.version}</artifactId>
+            <version>${spark.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>2.11.1</version>
+        </dependency>
     </dependencies>
 
     <properties>
         <java.version>1.8</java.version>
+        <spark.version>2.4.0</spark.version>
+        <geospark.version>1.2.0</geospark.version>
+        <scala.version>2.11</scala.version>
     </properties>
 
 
