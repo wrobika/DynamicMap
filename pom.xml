@@ -42,6 +42,16 @@
             <artifactId>scala-library</artifactId>
             <version>2.11.1</version>
         </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20180813</version>
+        </dependency>
+        <dependency>
+            <groupId>org.geotools</groupId>
+            <artifactId>gt-geojson</artifactId>
+            <version>21.1</version>
+        </dependency>
     </dependencies>
 
     <properties>
@@ -51,6 +61,12 @@
         <scala.version>2.11</scala.version>
     </properties>
 
+    <repositories>
+        <repository>
+            <id>geotools</id>
+            <url>http://download.osgeo.org/webdav/geotools/</url>
+        </repository>
+    </repositories>
 
     <build>
         <plugins>

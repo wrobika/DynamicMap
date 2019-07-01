@@ -34,7 +34,6 @@ public class TimePoint
         return destination.getX();
     }
 
-
     public double getLongitude()
     {
         return destination.getY();
