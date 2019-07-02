@@ -13,29 +13,36 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.locationtech.jts.geom.Geometry;
 import org.springframework.stereotype.Controller;
-
-import java.awt.geom.Point2D;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.List;
+import com.vividsolutions.jts.geom.Point;
+
+import static map.PointGridController.getPointGrid;
 
 @Controller
 public class OsrmController
 {
-    public static void downloadRoutesFromPoint(Point2D.Double startPoint)
+    public static void downloadRoutesFromPoint(Point startPoint)
     {
-        List<Point2D.Double> points = new ArrayList(Arrays.asList(startPoint));
-        points.add(new Point2D.Double(20.122974,50.097975));
-        String response = getRouteResponse(points);
-        if(response != null)
+        String fileName = "routes-" + String.valueOf(startPoint.getX())
+                +"-"+ String.valueOf(startPoint.getY()) +".json";
+        List<Point> pointGrid = getPointGrid();
+        for(Point point : pointGrid)
         {
-            JSONObject route = createRouteFromResponse(response);
-            writeRouteToFile("test.json", route.toString());
+            List<Point> points = new ArrayList<>(Arrays.asList(startPoint));
+            points.add(point);
+            String response = getRouteResponse(points);
+            if(response != null)
+            {
+                JSONObject route = createRouteFromResponse(response);
+                writeRouteToFile(fileName, route.toString());
+            }
         }
-
     }
 
-    private static String getRouteResponse(List<Point2D.Double> points)
+    private static String getRouteResponse(List<Point> points)
     {
         try {
             if(points.size() < 2)
@@ -108,14 +115,14 @@ public class OsrmController
                 .put("type", "Feature");
     }
 
-    private static String pointsToString(List<Point2D.Double> points)
+    private static String pointsToString(List<Point> points)
     {
         StringBuilder result = new StringBuilder();
 
-        for (Point2D.Double point : points) {
-            result.append(point.x);
+        for (Point point : points) {
+            result.append(point.getX());
             result.append(",");
-            result.append(point.y);
+            result.append(point.getY());
             result.append(";");
         }
 

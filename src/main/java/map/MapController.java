@@ -1,5 +1,7 @@
 package map;
 
+import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Point;
 import org.datasyslab.geospark.enums.FileDataSplitter;
 import org.datasyslab.geospark.formatMapper.GeoJsonReader;
@@ -12,46 +14,21 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 
+import static map.PointGridController.getTimePointGrid;
+import static map.PointGridController.readPointFromJSON;
+
 @Controller
 public class MapController {
 
     @GetMapping("/map")
     public String map(Model model) {
 
-        List<TimePoint> timePoints = readGrid();
-        readPointFromJSON();
+        //List<TimePoint> timePoints = getTimePointGrid();
+
+        GeometryFactory geometryFactory = new GeometryFactory();
+        Point startPoint = geometryFactory.createPoint(new Coordinate(19.960292,50.021329));
+        List<TimePoint> timePoints = readPointFromJSON(startPoint);
         model.addAttribute("points", timePoints);
         return "map";
-    }
-
-    private List<TimePoint> readGrid()
-    {
-        String pointRDDInputLocation = "/home/weronika/magisterka/DynamicMap/grid.csv";
-        int pointRDDOffset = 0;
-        FileDataSplitter pointRDDSplitter = FileDataSplitter.CSV;
-        PointRDD objectRDD = new PointRDD(Application.sc, pointRDDInputLocation, pointRDDOffset, pointRDDSplitter, true);
-
-        Long pointsCount = objectRDD.rawSpatialRDD.count();
-        List<Point> pointList = objectRDD.rawSpatialRDD.take(pointsCount.intValue());
-        ArrayList<TimePoint> timePoints = new ArrayList<>();
-        pointList.forEach(point -> timePoints.add(
-                new TimePoint(Double.parseDouble(point.getUserData().toString()),
-                        new Point2D.Double(point.getX(), point.getY()))
-        ));
-        return timePoints;
-    }
-
-    private void readPointFromJSON()
-    {
-        String inputLocation = "test.json";
-        SpatialRDD spatialRDD = GeoJsonReader.readToGeometryRDD(Application.sc, inputLocation);
-        spatialRDD.rawSpatialRDD.count();
-        //        Long pointsCount = spatialRDD.rawSpatialRDD.count();
-//        List<Point> pointList = spatialRDD.rawSpatialRDD.take(pointsCount.intValue());
-//        ArrayList<TimePoint> timePoints = new ArrayList<>();
-//        pointList.stream().forEach(point -> timePoints.add(
-//                new TimePoint(Double.parseDouble(point.getUserData().toString()),
-//                        new Point2D.Double(point.getX(), point.getY()))
-//        ));
     }
 }
