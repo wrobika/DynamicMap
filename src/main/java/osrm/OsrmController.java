@@ -1,33 +1,28 @@
 package osrm;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
-import org.geotools.geojson.GeoJSON;
-import org.geotools.geojson.geom.GeometryJSON;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.locationtech.jts.geom.Geometry;
 import org.springframework.stereotype.Controller;
 import java.io.*;
-import java.net.*;
 import java.util.*;
 import java.util.List;
 import com.vividsolutions.jts.geom.Point;
 
-import static map.PointGridController.getPointGrid;
+import static map.GridController.fileName;
+import static map.GridController.getPointGrid;
 
 @Controller
 public class OsrmController
 {
     public static void downloadRoutesFromPoint(Point startPoint)
     {
-        String fileName = "routes-" + String.valueOf(startPoint.getX())
-                +"-"+ String.valueOf(startPoint.getY()) +".json";
+        String fileName = fileName(startPoint);
         List<Point> pointGrid = getPointGrid();
         for(Point point : pointGrid)
         {

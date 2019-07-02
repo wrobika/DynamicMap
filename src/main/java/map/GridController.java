@@ -5,27 +5,24 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
-import org.apache.spark.api.java.JavaRDD;
 import org.datasyslab.geospark.enums.FileDataSplitter;
 import org.datasyslab.geospark.formatMapper.GeoJsonReader;
 import org.datasyslab.geospark.formatMapper.shapefileParser.ShapefileReader;
-import org.datasyslab.geospark.spatialRDD.LineStringRDD;
 import org.datasyslab.geospark.spatialRDD.PointRDD;
 import org.datasyslab.geospark.spatialRDD.PolygonRDD;
 import org.datasyslab.geospark.spatialRDD.SpatialRDD;
-
 import java.awt.geom.Point2D;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static java.lang.Math.cos;
 
-public class PointGridController
+public class GridController
 {
     public static void createGrid()
     {
@@ -52,7 +49,7 @@ public class PointGridController
             Polygon krakowPolygon = krakowPolygonRDD.rawSpatialRDD.first();
 
             List<Point> pointInKrakowList = pointList.stream()
-                    .filter(point -> krakowPolygon.contains(point))
+                    .filter(krakowPolygon::contains)
                     .collect(Collectors.toList());
             for(Point point : pointInKrakowList)
             {
@@ -67,55 +64,47 @@ public class PointGridController
         }
     }
 
-    public static List<TimePoint> getTimePointGrid()
-    {
-        boolean withTime = true;
-        List<Point> pointList = getPointList(withTime);
-        ArrayList<TimePoint> timePoints = new ArrayList<>();
-        pointList.forEach(point -> timePoints.add(
-                new TimePoint(Double.parseDouble(point.getUserData().toString()),
-                        new Point2D.Double(point.getX(), point.getY()))
-        ));
-        return timePoints;
-    }
-
     public static List<Point> getPointGrid()
-    {
-        boolean carryOtherAtributes = false;
-        return getPointList(carryOtherAtributes);
-    }
-
-    private static List<Point> getPointList(boolean withTime)
     {
         String pointRDDInputLocation = "/home/weronika/magisterka/DynamicMap/grid.csv";
         int pointRDDOffset = 0;
         FileDataSplitter pointRDDSplitter = FileDataSplitter.CSV;
-        PointRDD objectRDD = new PointRDD(Application.sc, pointRDDInputLocation, pointRDDOffset, pointRDDSplitter, withTime);
+        PointRDD objectRDD = new PointRDD(Application.sc, pointRDDInputLocation, pointRDDOffset, pointRDDSplitter, false);
 
         Long pointsCount = objectRDD.rawSpatialRDD.count();
         List<Point> pointList = objectRDD.rawSpatialRDD.take(pointsCount.intValue());
         return pointList;
     }
 
-    public static List<TimePoint> readPointFromJSON(Point startPoint)
+    static Map<Point, Double> getTimeGrid(List<Point> ambulancePoints)
     {
-        //TODO: jedna metoda zwracająca nazwę pliku dla punktu
-        String inputLocation = "routes-" + String.valueOf(startPoint.getX())
-                +"-"+ String.valueOf(startPoint.getY()) +".json";
-        SpatialRDD spatialRDD = GeoJsonReader.readToGeometryRDD(Application.sc, inputLocation);
-        Long pointsCount = spatialRDD.rawSpatialRDD.count();
-        List<LineString> routeList = spatialRDD.rawSpatialRDD.take(pointsCount.intValue());
-        ArrayList<TimePoint> timePoints = new ArrayList<>();
-        for(LineString route : routeList) {
-            String[] userData = route.getUserData().toString().split("\t");
-            String[] endCoordinates = userData[1]
-                    .substring(1, userData[1].length() - 1)
-                    .split(",");
-            Double x = Double.valueOf(endCoordinates[1]);
-            Double y = Double.valueOf(endCoordinates[0]);
-            Double time = Double.valueOf(userData[2]);
-            timePoints.add(new TimePoint(time, new Point2D.Double(x, y)));
+        Map<Point, Double> timeGrid = new HashMap<>();
+        for(Point ambulanceLocation : ambulancePoints) {
+            String inputLocation = fileName(ambulanceLocation);
+            SpatialRDD spatialRDD = GeoJsonReader.readToGeometryRDD(Application.sc, inputLocation);
+            Long pointsCount = spatialRDD.rawSpatialRDD.count();
+            List<LineString> routeList = spatialRDD.rawSpatialRDD.take(pointsCount.intValue());
+            for (LineString route : routeList) {
+                String[] userData = route.getUserData().toString().split("\t");
+                String[] endCoordinates = userData[1]
+                        .substring(1, userData[1].length() - 1)
+                        .split(",");
+                Double x = Double.valueOf(endCoordinates[0]);
+                Double y = Double.valueOf(endCoordinates[1]);
+                Double time = Double.valueOf(userData[2]);
+                GeometryFactory geometryFactory = new GeometryFactory();
+                Point point = geometryFactory.createPoint(new Coordinate(x,y));
+                if(!timeGrid.containsKey(point) || timeGrid.get(point) > time) {
+                    timeGrid.put(point, time);
+                }
+            }
         }
-        return timePoints;
+        return timeGrid;
+    }
+
+    public static String fileName(Point point)
+    {
+        return "routes-" + String.valueOf(point.getX())
+                +"-"+ String.valueOf(point.getY()) +".json";
     }
 }

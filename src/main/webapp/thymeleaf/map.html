@@ -26,16 +26,16 @@
         return 'black';
     }
 
-
+    var wktReader = new ol.format.WKT();
     var pointsFeatures = [];
-    var pointList = [[${points}]]
+    var mapPointTime = [[${points}]]
+    var pointList = Object.keys(mapPointTime);
     for (var i = 0; i < pointList.length; i++) {
-        var lat = pointList[i].latitude;
-        var lon = pointList[i].longitude;
 
-        var feature = new ol.Feature({
-    		geometry: new ol.geom.Point(ol.proj.transform([lon, lat], 'EPSG:4326', 'EPSG:3857')),
-	    });
+	    var feature = wktReader.readFeature(pointList[i]);
+            feature.getGeometry().transform('EPSG:4326', 'EPSG:3857');
+            var time = mapPointTime[pointList[i]];
+
         feature.setStyle(new ol.style.Style({
                 image: new ol.style.Circle({
                     radius: 4,
@@ -43,7 +43,7 @@
                         color: '#fff'
                     }),
                     fill: new ol.style.Fill({
-                        color: timeColor(pointList[i].time)
+                        color: timeColor(time)
                     })
                 })
             }));
