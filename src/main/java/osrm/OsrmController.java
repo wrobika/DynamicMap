@@ -39,6 +39,8 @@ public class OsrmController
 
     private static String getRouteResponse(List<Point> points)
     {
+        //TODO: stop, gdy nie uruchomiony serwer osrm
+        //osrm-routed --algorithm=MLD malopolskie-latest.osrm
         try {
             if(points.size() < 2)
                 throw new Exception("too few points to set route");

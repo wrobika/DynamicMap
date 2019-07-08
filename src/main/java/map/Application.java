@@ -29,8 +29,8 @@ public class Application {
 
         //createGrid();
 
-        GeometryFactory geometryFactory = new GeometryFactory();
-        Point startPoint = geometryFactory.createPoint(new Coordinate(19.916150,50.091422));
-        OsrmController.downloadRoutesFromPoint(startPoint);
+        //GeometryFactory geometryFactory = new GeometryFactory();
+        //Point startPoint = geometryFactory.createPoint(new Coordinate(19.916150,50.091422));
+        //OsrmController.downloadRoutesFromPoint(startPoint);
     }
 }

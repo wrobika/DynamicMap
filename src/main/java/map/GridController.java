@@ -11,9 +11,14 @@ import org.datasyslab.geospark.formatMapper.shapefileParser.ShapefileReader;
 import org.datasyslab.geospark.spatialRDD.PointRDD;
 import org.datasyslab.geospark.spatialRDD.PolygonRDD;
 import org.datasyslab.geospark.spatialRDD.SpatialRDD;
+import osrm.OsrmController;
+
 import java.awt.geom.Point2D;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -76,11 +81,33 @@ public class GridController
         return pointList;
     }
 
+    static Map<Point, Double> getEmptyGrid()
+    {
+        List<Point> points = getPointGrid();
+        Map<Point, Double> emptyGrid = new HashMap<>();
+        for (Point point : points)
+        {
+            emptyGrid.put(point, 30.0);
+        }
+        return emptyGrid;
+    }
+
     static Map<Point, Double> getTimeGrid(List<Point> ambulancePoints)
     {
+        if(ambulancePoints.isEmpty())
+        {
+            return getEmptyGrid();
+        }
         Map<Point, Double> timeGrid = new HashMap<>();
-        for(Point ambulanceLocation : ambulancePoints) {
+        for(Point ambulanceLocation : ambulancePoints)
+        {
             String inputLocation = fileName(ambulanceLocation);
+            Path path = Paths.get(inputLocation);
+            if(Files.notExists(path))
+            {
+                OsrmController.downloadRoutesFromPoint(ambulanceLocation);
+            }
+
             SpatialRDD spatialRDD = GeoJsonReader.readToGeometryRDD(Application.sc, inputLocation);
             Long pointsCount = spatialRDD.rawSpatialRDD.count();
             List<LineString> routeList = spatialRDD.rawSpatialRDD.take(pointsCount.intValue());
