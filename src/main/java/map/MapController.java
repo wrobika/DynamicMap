@@ -14,14 +14,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-
+import static map.GridController.getEmptyIrregularGrid;
 import static map.GridController.getTimeGrid;
 
 @Controller
 public class MapController {
 
-    @GetMapping("/map")
-    public String map(@RequestParam(required=false) List<String> coordinates, Model model)
+    @GetMapping("/map2")
+    public String map2(@RequestParam(required=false) List<String> coordinates, Model model)
     {
         GeometryFactory geometryFactory = new GeometryFactory();
         Map<Point, Double> timePoints;
@@ -49,11 +49,18 @@ public class MapController {
         return "map";
     }
 
+    @GetMapping("/map")
+    public String map(Model model)
+    {
+        Map<Point, Double> timePoints = getEmptyIrregularGrid();
+        model.addAttribute("points", timePoints);
+        return "map";
+    }
+
     @RequestMapping(value = "/grid", method=RequestMethod.POST)
     public @ResponseBody
     Map<Point, Double> grid(@RequestBody String ambulanceCoordinates)
     {
-        Map<Point, Double> timePoints;
         List<Point> ambulancePoints = new ArrayList<>();
         try
         {
@@ -77,7 +84,6 @@ public class MapController {
         {
             System.out.println(ex.getMessage());
         }
-        timePoints = getTimeGrid(ambulancePoints);
-        return timePoints;
+        return getTimeGrid(ambulancePoints);
     }
 }

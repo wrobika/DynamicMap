@@ -13,16 +13,12 @@ import org.datasyslab.geospark.spatialRDD.PolygonRDD;
 import org.datasyslab.geospark.spatialRDD.SpatialRDD;
 import osrm.OsrmController;
 
-import java.awt.geom.Point2D;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.lang.Math.cos;
@@ -69,7 +65,7 @@ public class GridController
         }
     }
 
-    public static List<Point> getPointGrid()
+    public static List<Point> getRegularGrid()
     {
         String pointRDDInputLocation = "/home/weronika/magisterka/DynamicMap/grid.csv";
         int pointRDDOffset = 0;
@@ -81,9 +77,20 @@ public class GridController
         return pointList;
     }
 
-    static Map<Point, Double> getEmptyGrid()
+    static Map<Point, Double> getEmptyIrregularGrid()
     {
-        List<Point> points = getPointGrid();
+        GeometryFactory geometryFactory = new GeometryFactory();
+        Point point = geometryFactory.createPoint(new Coordinate(19.960292,50.021329));
+        Map<Point, Double> map = getTimeGrid(Arrays.asList(point));
+        for (Map.Entry<Point, Double> entry : map.entrySet()) {
+            map.put(entry.getKey(), 1300.0);
+        }
+        return map;
+    }
+
+    static Map<Point, Double> getEmptyRegularGrid()
+    {
+        List<Point> points = getRegularGrid();
         Map<Point, Double> emptyGrid = new HashMap<>();
         for (Point point : points)
         {
@@ -96,7 +103,7 @@ public class GridController
     {
         if(ambulancePoints.isEmpty())
         {
-            return getEmptyGrid();
+            return getEmptyIrregularGrid();
         }
         Map<Point, Double> timeGrid = new HashMap<>();
         for(Point ambulanceLocation : ambulancePoints)

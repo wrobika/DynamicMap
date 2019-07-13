@@ -27,8 +27,8 @@
     /*<![CDATA[*/
 
     function timeColor(value) {
-        if (value === 0) {
-            return 'white';
+        if (value == 0) {
+            return 'magenta';
         }
         if (value < 420) {
             return 'green';
@@ -37,19 +37,22 @@
             return 'yellow';
         }
         if (value < 1260) {
-            return'red';
+            return 'red';
         }
         return 'black';
     }
 
     function loadFeatures(mapPointTime) {
+        Object.keys(mapPointTime).forEach(function(key) {
+            if(mapPointTime[key] == 0) console.log(key, mapPointTime[key]);
+        });
         var pointList = Object.keys(mapPointTime);
         var pointsFeatures = [];
         for (var i = 0; i < pointList.length; i++) {
 
             var feature = wktReader.readFeature(pointList[i]);
-                feature.getGeometry().transform('EPSG:4326', 'EPSG:3857');
-                var time = mapPointTime[pointList[i]];
+            feature.getGeometry().transform('EPSG:4326', 'EPSG:3857');
+            var time = mapPointTime[pointList[i]];
 
             feature.setStyle(new ol.style.Style({
                     image: new ol.style.Circle({
@@ -59,6 +62,7 @@
                         })
                     })
                 }));
+            if(time == 0) console.log(timeColor(time));
             pointsFeatures.push(feature);
         }
         return pointsFeatures;
@@ -71,8 +75,8 @@
     }
 
     var wktReader = new ol.format.WKT();
-    var mapPointTime = [[${points}]]
-    var pointsFeatures = loadFeatures(mapPointTime);
+    var modelMapPointTime = [[${points}]]
+    var pointsFeatures = loadFeatures(modelMapPointTime);
 
     var pointsSource = new ol.source.Vector({
         features: pointsFeatures
@@ -109,7 +113,27 @@
                 e.target.getFeatures().getLength() +
                 ' selected features (last operation selected ' + e.selected.length +
                 ' and deselected ' + e.deselected.length + ' features)';
-            selected = selected.concat(select.getFeatures().getArray());
+            var geometries = [];
+            var selectFeatures = select.getFeatures().getArray();
+            selectFeatures.forEach(function(item){
+                geometries.push(item.getGeometry().getCoordinates());
+            });
+            var toRemove = selected.filter(function(value){
+                return geometries.some(function(geom){
+                    return (geom[0] == value.getGeometry().getCoordinates()[0]) && (geom[1] == value.getGeometry().getCoordinates()[1])
+                });
+            });
+            selected = selected.filter(function(value){
+                return !toRemove.some(function(geom){
+                    return (geom.getGeometry().getCoordinates()[0] == value.getGeometry().getCoordinates()[0]) && (geom.getGeometry().getCoordinates()[1] == value.getGeometry().getCoordinates()[1])
+                });
+            });
+            selectFeatures = selectFeatures.filter(function(value){
+                return !toRemove.some(function(geom){
+                    return (geom.getGeometry().getCoordinates()[0] == value.getGeometry().getCoordinates()[0]) && (geom.getGeometry().getCoordinates()[1] == value.getGeometry().getCoordinates()[1])
+                });
+            });
+            selected = selected.concat(selectFeatures);
             $.ajax({
                 contentType: "application/json; charset=utf-8",
                 type: "POST",

@@ -15,7 +15,7 @@ import java.util.List;
 import com.vividsolutions.jts.geom.Point;
 
 import static map.GridController.fileName;
-import static map.GridController.getPointGrid;
+import static map.GridController.getRegularGrid;
 
 @Controller
 public class OsrmController
@@ -23,7 +23,7 @@ public class OsrmController
     public static void downloadRoutesFromPoint(Point startPoint)
     {
         String fileName = fileName(startPoint);
-        List<Point> pointGrid = getPointGrid();
+        List<Point> pointGrid = getRegularGrid();
         for(Point point : pointGrid)
         {
             List<Point> points = new ArrayList<>(Arrays.asList(startPoint));
