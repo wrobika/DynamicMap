@@ -12,13 +12,9 @@
     <label>Action type &nbsp;</label>
     <select id="type" class="form-control">
         <option value="click" selected>Click</option>
-        <option value="singleclick">Single-click</option>
-        <option value="pointermove">Hover</option>
-        <option value="altclick">Alt+Click</option>
-        <option value="none">None</option>
+        <option value="road">Road</option>
     </select>
     <span id="status">&nbsp;0 selected features</span>
-    <span id="status2">&nbsp;0 selected features</span>
 </form>
 <div id="Map" class="map"></div>
 <script src="https://openlayers.org/en/v4.6.5/build/ol.js"></script>
@@ -68,12 +64,6 @@
         return pointsFeatures;
     }
 
-    function loadMap(pointsFeatures){
-
-
-        return map;
-    }
-
     var wktReader = new ol.format.WKT();
     var modelMapPointTime = [[${points}]]
     var pointsFeatures = loadFeatures(modelMapPointTime);
@@ -86,12 +76,27 @@
         source: pointsSource
     });
 
+    var roadSource = new ol.source.Vector({
+        wrapX: false
+    });
+
+    var road = new ol.layer.Vector({
+        source: roadSource,
+        style: new ol.style.Style({
+           stroke: new ol.style.Stroke({
+                color: 'red',
+                width: 5
+            })
+        })
+    });
+
+
     var raster = new ol.layer.Tile({
         source: new ol.source.OSM()
     });
 
     var map = new ol.Map({
-        layers: [raster, points],
+        layers: [raster, points, road],
         target: 'Map',
         view: new ol.View({
             center: ol.proj.fromLonLat([19.938618, 50.060601]),
@@ -99,59 +104,73 @@
         })
     });
 
-    var select = new ol.interaction.Select({
-        condition: ol.events.condition.click,
-    });
+    var interaction = null;
 
     var selected = [];
 
+    var interactionType = document.getElementById('type');
+
     var changeInteraction = function() {
-        map.removeInteraction(select);
-        map.addInteraction(select);
-        select.on('select', function(e) {
-            document.getElementById('status').innerHTML = '&nbsp;' +
-                e.target.getFeatures().getLength() +
-                ' selected features (last operation selected ' + e.selected.length +
-                ' and deselected ' + e.deselected.length + ' features)';
-            var geometries = [];
-            var selectFeatures = select.getFeatures().getArray();
-            selectFeatures.forEach(function(item){
-                geometries.push(item.getGeometry().getCoordinates());
+        if (interaction !== null) {
+            map.removeInteraction(interaction);
+        }
+        if(interactionType.value == 'road') {
+            interaction = new ol.interaction.Draw({
+                source: roadSource,
+                type: 'LineString',
             });
-            var toRemove = selected.filter(function(value){
-                return geometries.some(function(geom){
-                    return (geom[0] == value.getGeometry().getCoordinates()[0]) && (geom[1] == value.getGeometry().getCoordinates()[1])
+            map.addInteraction(interaction);
+        }
+        else {
+            interaction = new ol.interaction.Select({
+                condition: ol.events.condition.click,
+            });
+            map.addInteraction(interaction);
+            interaction.on('select', function(e) {
+                document.getElementById('status').innerHTML = '&nbsp;' +
+                    e.target.getFeatures().getLength() +
+                    ' selected features (last operation selected ' + e.selected.length +
+                    ' and deselected ' + e.deselected.length + ' features)';
+                var geometries = [];
+                var selectFeatures = interaction.getFeatures().getArray();
+                selectFeatures.forEach(function(item){
+                    geometries.push(item.getGeometry().getCoordinates());
+                });
+                var toRemove = selected.filter(function(value){
+                    return geometries.some(function(geom){
+                        return (geom[0] == value.getGeometry().getCoordinates()[0]) && (geom[1] == value.getGeometry().getCoordinates()[1])
+                    });
+                });
+                selected = selected.filter(function(value){
+                    return !toRemove.some(function(geom){
+                        return (geom.getGeometry().getCoordinates()[0] == value.getGeometry().getCoordinates()[0]) && (geom.getGeometry().getCoordinates()[1] == value.getGeometry().getCoordinates()[1])
+                    });
+                });
+                selectFeatures = selectFeatures.filter(function(value){
+                    return !toRemove.some(function(geom){
+                        return (geom.getGeometry().getCoordinates()[0] == value.getGeometry().getCoordinates()[0]) && (geom.getGeometry().getCoordinates()[1] == value.getGeometry().getCoordinates()[1])
+                    });
+                });
+                selected = selected.concat(selectFeatures);
+                $.ajax({
+                    contentType: "application/json; charset=utf-8",
+                    type: "POST",
+                    url: "/grid",
+                    data: wktReader.writeFeatures(selected, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' }),
+                    success: function(data) {
+                        var pointsFeatures = loadFeatures(data);
+                        points.getSource().clear();
+                        points.getSource().addFeatures(pointsFeatures);
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        console.log('error while post');
+                    }
                 });
             });
-            selected = selected.filter(function(value){
-                return !toRemove.some(function(geom){
-                    return (geom.getGeometry().getCoordinates()[0] == value.getGeometry().getCoordinates()[0]) && (geom.getGeometry().getCoordinates()[1] == value.getGeometry().getCoordinates()[1])
-                });
-            });
-            selectFeatures = selectFeatures.filter(function(value){
-                return !toRemove.some(function(geom){
-                    return (geom.getGeometry().getCoordinates()[0] == value.getGeometry().getCoordinates()[0]) && (geom.getGeometry().getCoordinates()[1] == value.getGeometry().getCoordinates()[1])
-                });
-            });
-            selected = selected.concat(selectFeatures);
-            $.ajax({
-                contentType: "application/json; charset=utf-8",
-                type: "POST",
-                url: "/grid",
-                data: wktReader.writeFeatures(selected, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' }),
-                success: function(data) {
-                    document.getElementById('status2').innerHTML = '&nbsp;' + data;
-                    var pointsFeatures = loadFeatures(data);
-                    points.getSource().clear();
-                    points.getSource().addFeatures(pointsFeatures);
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    console.log('error while post');
-                }
-            });
-        });
+        }
     };
 
+    interactionType.onchange = changeInteraction;
     changeInteraction();
 
     /*]]>*/
