@@ -120,6 +120,22 @@
                 type: 'LineString',
             });
             map.addInteraction(interaction);
+            interaction.on('drawend', function(e){
+                $.ajax({
+                    contentType: "application/json; charset=utf-8",
+                    type: "POST",
+                    url: "/update",
+                    data: wktReader.writeFeature(e.feature, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' }),
+                    success: function(data) {
+                        //var pointsFeatures = loadFeatures(data);
+                        //points.getSource().clear();
+                        //points.getSource().addFeatures(pointsFeatures);
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        console.log('error while post');
+                    }
+                });
+            });
         }
         else {
             interaction = new ol.interaction.Select({

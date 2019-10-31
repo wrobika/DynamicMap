@@ -1,10 +1,6 @@
 package map;
 
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.GeometryFactory;
-import com.vividsolutions.jts.geom.Point;
-import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.GeometryCollection;
+import com.vividsolutions.jts.geom.*;
 import com.vividsolutions.jts.io.WKTReader;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -16,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import static map.GridController.getEmptyIrregularGrid;
 import static map.GridController.getTimeGrid;
+import static osrm.UpdateController.updateRoads;
 
 @Controller
 public class MapController {
@@ -85,5 +82,29 @@ public class MapController {
             System.out.println(ex.getMessage());
         }
         return getTimeGrid(ambulancePoints);
+    }
+
+    @RequestMapping(value = "/update", method=RequestMethod.POST)
+    public @ResponseBody
+    Map<Point, Double> update(@RequestBody String roadToUpdate)
+    {
+        try
+        {
+            List<Point> roadPoints = new ArrayList<>();
+            GeometryFactory geometryFactory = new GeometryFactory();
+            WKTReader wktReader = new WKTReader();
+            Geometry geometry = wktReader.read(roadToUpdate);
+            Coordinate[] coordinates = geometry.getCoordinates();
+            for (Coordinate coord : coordinates)
+            {
+                roadPoints.add(geometryFactory.createPoint(coord));
+            }
+            List nodes = updateRoads(roadPoints);
+        }
+        catch(Exception ex)
+        {
+            System.out.println(ex.getMessage());
+        }
+        return null;
     }
 }

@@ -4,14 +4,17 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 import java.io.*;
+import java.net.URL;
 import java.util.*;
 import java.util.List;
+
 import com.vividsolutions.jts.geom.Point;
 
 import static map.GridController.fileName;
@@ -20,42 +23,64 @@ import static map.GridController.getRegularGrid;
 @Controller
 public class OsrmController
 {
+    //TODO: table request OSRM instead point to point
     public static void downloadRoutesFromPoint(Point startPoint)
     {
         String fileName = fileName(startPoint);
         List<Point> pointGrid = getRegularGrid();
         for(Point point : pointGrid)
         {
-            List<Point> points = new ArrayList<>(Arrays.asList(startPoint));
+            List<Point> points = Collections.singletonList(startPoint);
             points.add(point);
-            String response = getRouteResponse(points);
-            if(response != null)
+            try
             {
+                String response = getRouteResponse(points);
                 JSONObject route = createRouteFromResponse(response);
                 writeRouteToFile(fileName, route.toString());
+            }
+            catch(Exception ex)
+            {
+                System.out.println(ex.getMessage());
             }
         }
     }
 
-    private static String getRouteResponse(List<Point> points)
+    static String getHttpResponse(String path, Map<String, String> parameters)
     {
         //TODO: stop, gdy nie uruchomiony serwer osrm
         //osrm-routed --algorithm=MLD malopolskie-latest.osrm
-        try {
-            if(points.size() < 2)
-                throw new Exception("too few points to set route");
-            String pointsString = pointsToString(points);
-            String url = "http://127.0.0.1:5000/route/v1/driving/" + pointsString + "?geometries=geojson";
+        try
+        {
+            URIBuilder builder = new URIBuilder();
+            builder.setScheme("http");
+            //builder.setHost("127.0.0.1");
+            //builder.setPort(5000);
+            builder.setHost("router.project-osrm.org");
+            builder.setPath(path);
+            parameters.forEach(builder::addParameter);
+            URL url = builder.build().toURL();
+
             HttpClient client = HttpClientBuilder.create().build();
-            HttpResponse response = client.execute(new HttpGet(url));
+            HttpResponse response = client.execute(new HttpGet(url.toString()));
             HttpEntity entityResponse = response.getEntity();
             return EntityUtils.toString(entityResponse, "UTF-8");
         }
         catch(Exception ex)
         {
             System.out.println(ex.getMessage());
-            return null;
+            return "";
         }
+    }
+
+    private static String getRouteResponse(List<Point> points) throws Exception
+    {
+        if(points.size() < 2)
+            throw new Exception("too few points to set route");
+        String pointsString = pointsToString(points);
+        String path = "/route/v1/driving/" + pointsString;
+        Map<String, String> parameters = new HashMap<>();
+        parameters.put("geometries","geojson");
+        return getHttpResponse(path,parameters);
     }
 
     private static void writeRouteToFile(String fileName, String routeJSON)
@@ -98,21 +123,11 @@ public class OsrmController
                         .put("time", time)
                         .put("start", startPoint)
                         .put("end", endPoint)
-//                        .put("STATEFP", "01")
-//                        .put("COUNTYFP", "089")
-//                        .put("TRACTCE", "001700")
-//                        .put("BLKGRPCE", "2")
-//                        .put("AFFGEOID", "1500000US010890017002")
-//                        .put("GEOID", "010890017002")
-//                        .put("NAME", "2")
-//                        .put("LSAD", "BG")
-//                        .put("ALAND", 1040641)
-//                        .put("AWATER", 0)
                 )
                 .put("type", "Feature");
     }
 
-    private static String pointsToString(List<Point> points)
+    static String pointsToString(List<Point> points)
     {
         StringBuilder result = new StringBuilder();
 
