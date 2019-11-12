@@ -1,18 +1,8 @@
 package osrm;
 
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.GeometryFactory;
-import com.vividsolutions.jts.geom.LineString;
-import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.geom.*;
 import map.Application;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.util.EntityUtils;
 import org.apache.spark.api.java.JavaRDD;
-import org.datasyslab.geospark.formatMapper.GeoJsonReader;
 import org.datasyslab.geospark.spatialOperator.RangeQuery;
 import org.datasyslab.geospark.spatialRDD.SpatialRDD;
 import org.json.JSONArray;
@@ -20,16 +10,12 @@ import org.json.JSONObject;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
+import static map.RDDController.getRoutesRDDFromFiles;
 import static osrm.OsrmController.getHttpResponse;
 import static osrm.OsrmController.pointsToString;
 
@@ -51,12 +37,11 @@ public class UpdateController
             }
         } while (!responseJSON.has("trips"));
         List nodes = getRoadNodes(responseJSON);
-        LineString road = getRoad(responseJSON);
-        JavaRDD intersectedRoutesRDD = findIntersectedRoutes(road);
-
         if(!nodes.isEmpty())
         {
             writeUpdateFile(nodes);
+            LineString road = getRoad(responseJSON);
+            JavaRDD intersectedRoutesRDD = findIntersectedRoutes(road);
         }
         return nodes;
     }
@@ -138,29 +123,18 @@ public class UpdateController
 
     private static JavaRDD findIntersectedRoutes(LineString road)
     {
-        JavaRDD<LineString> allRoutesRDD = Application.sc.emptyRDD();
-        List<JavaRDD<LineString>> routeRDDsList = new ArrayList<>();
-        try (Stream<Path> routeFiles = Files.walk(Paths.get("")))
+        JavaRDD intersectedRoutesRDD = Application.sc.emptyRDD();
+        try
         {
-            List<String> fileNames = routeFiles.map(Path::toString)
-                    .filter(f -> f.startsWith("routes-"))
-                    .collect(Collectors.toList());
-
-            for (String file: fileNames)
-            {
-                SpatialRDD routesFromOnePoint = GeoJsonReader.readToGeometryRDD(Application.sc, file);
-                routeRDDsList.add(routesFromOnePoint.rawSpatialRDD);
-            }
-
-            allRoutesRDD = Application.sc.union(allRoutesRDD, routeRDDsList);
-            SpatialRDD<LineString> allRoutesSpatialRDD = new SpatialRDD<>();
+            JavaRDD<Geometry> allRoutesRDD = getRoutesRDDFromFiles();
+            SpatialRDD<Geometry> allRoutesSpatialRDD = new SpatialRDD<>();
             allRoutesSpatialRDD.setRawSpatialRDD(allRoutesRDD);
-            return RangeQuery.SpatialRangeQuery(allRoutesSpatialRDD, road, true, false);
+            intersectedRoutesRDD = RangeQuery.SpatialRangeQuery(allRoutesSpatialRDD, road, true, false);
         }
         catch (Exception e)
         {
             e.printStackTrace();
-            return allRoutesRDD;
         }
+        return intersectedRoutesRDD;
     }
 }

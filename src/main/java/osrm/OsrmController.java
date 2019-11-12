@@ -18,16 +18,15 @@ import java.util.List;
 import com.vividsolutions.jts.geom.Point;
 
 import static map.GridController.fileName;
-import static map.GridController.getRegularGrid;
+import static map.GridController.getGrid;
 
 @Controller
 public class OsrmController
 {
-    //TODO: table request OSRM instead point to point
     public static void downloadRoutesFromPoint(Point startPoint)
     {
         String fileName = fileName(startPoint);
-        List<Point> pointGrid = getRegularGrid();
+        List<Point> pointGrid = getGrid(false);
         for(Point point : pointGrid)
         {
             List<Point> points = Collections.singletonList(startPoint);
@@ -41,6 +40,29 @@ public class OsrmController
             catch(Exception ex)
             {
                 System.out.println(ex.getMessage());
+            }
+        }
+    }
+
+    public static void downloadRoutes(List<Point> ambulancePoints, String fileName)
+    {
+        List<Point> gridPoints = getGrid(false);
+        for (Point ambulance: ambulancePoints)
+        {
+            for(Point pointFromGrid : gridPoints)
+            {
+                List<Point> startEndPoints = Collections.singletonList(ambulance);
+                startEndPoints.add(pointFromGrid);
+                try
+                {
+                    String response = getRouteResponse(startEndPoints);
+                    JSONObject route = createRouteFromResponse(response);
+                    writeRouteToFile(fileName, route.toString());
+                }
+                catch(Exception ex)
+                {
+                    System.out.println(ex.getMessage());
+                }
             }
         }
     }

@@ -10,7 +10,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import static map.GridController.getEmptyIrregularGrid;
+
+import static map.GridController.getEmptyGrid;
 import static map.GridController.getTimeGrid;
 import static osrm.UpdateController.updateRoads;
 
@@ -49,7 +50,7 @@ public class MapController {
     @GetMapping("/map")
     public String map(Model model)
     {
-        Map<Point, Double> timePoints = getEmptyIrregularGrid();
+        Map<Point, Double> timePoints = getEmptyGrid(true);
         model.addAttribute("points", timePoints);
         return "map";
     }

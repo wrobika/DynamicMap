@@ -7,8 +7,6 @@ import org.datasyslab.geospark.serde.GeoSparkKryoRegistrator;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import osrm.OsrmController;
-
 @SpringBootApplication
 public class Application {
 

@@ -1,17 +1,19 @@
 package map;
 
-import com.vividsolutions.jts.geom.Coordinate;
-import com.vividsolutions.jts.geom.GeometryFactory;
-import com.vividsolutions.jts.geom.LineString;
-import com.vividsolutions.jts.geom.Point;
-import com.vividsolutions.jts.geom.Polygon;
+import com.vividsolutions.jts.geom.*;
+import org.apache.commons.math3.util.Pair;
+import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.function.Function;
 import org.datasyslab.geospark.enums.FileDataSplitter;
 import org.datasyslab.geospark.formatMapper.GeoJsonReader;
 import org.datasyslab.geospark.formatMapper.shapefileParser.ShapefileReader;
+import org.datasyslab.geospark.spatialRDD.LineStringRDD;
 import org.datasyslab.geospark.spatialRDD.PointRDD;
 import org.datasyslab.geospark.spatialRDD.PolygonRDD;
 import org.datasyslab.geospark.spatialRDD.SpatialRDD;
 import osrm.OsrmController;
+import scala.Tuple2;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -65,80 +67,95 @@ public class GridController
         }
     }
 
-    public static List<Point> getRegularGrid()
+    public static List<Point> getGrid(boolean fitToRoadNetwork)
     {
-        String pointRDDInputLocation = "/home/weronika/magisterka/DynamicMap/grid.csv";
+        String pointRDDInputLocation = "/home/weronika/magisterka/DynamicMap/irregularGrid.csv";
+        if(!fitToRoadNetwork)
+        {
+            pointRDDInputLocation = "/home/weronika/magisterka/DynamicMap/grid.csv";
+        }
         int pointRDDOffset = 0;
         FileDataSplitter pointRDDSplitter = FileDataSplitter.CSV;
-        PointRDD objectRDD = new PointRDD(Application.sc, pointRDDInputLocation, pointRDDOffset, pointRDDSplitter, false);
-
-        Long pointsCount = objectRDD.rawSpatialRDD.count();
-        List<Point> pointList = objectRDD.rawSpatialRDD.take(pointsCount.intValue());
-        return pointList;
+        PointRDD pointsRDD = new PointRDD(Application.sc, pointRDDInputLocation, pointRDDOffset, pointRDDSplitter, false);
+        return pointsRDD.rawSpatialRDD.collect();
     }
 
-    static Map<Point, Double> getEmptyIrregularGrid()
+    static Map<Point, Double> getEmptyGrid(boolean fitToRoadNetwork)
     {
-        GeometryFactory geometryFactory = new GeometryFactory();
-        Point point = geometryFactory.createPoint(new Coordinate(19.960292,50.021329));
-        Map<Point, Double> map = getTimeGrid(Arrays.asList(point));
-        for (Map.Entry<Point, Double> entry : map.entrySet()) {
-            map.put(entry.getKey(), 1300.0);
-        }
-        return map;
-    }
-
-    static Map<Point, Double> getEmptyRegularGrid()
-    {
-        List<Point> points = getRegularGrid();
+        List<Point> points = getGrid(fitToRoadNetwork);
         Map<Point, Double> emptyGrid = new HashMap<>();
         for (Point point : points)
         {
-            emptyGrid.put(point, 30.0);
+            emptyGrid.put(point, 3000.0);
         }
         return emptyGrid;
-    }
-
-    static Map<Point, Double> getTimeGrid(List<Point> ambulancePoints)
-    {
-        if(ambulancePoints.isEmpty())
-        {
-            return getEmptyIrregularGrid();
-        }
-        Map<Point, Double> timeGrid = new HashMap<>();
-        for(Point ambulanceLocation : ambulancePoints)
-        {
-            String inputLocation = fileName(ambulanceLocation);
-            Path path = Paths.get(inputLocation);
-            if(Files.notExists(path))
-            {
-                OsrmController.downloadRoutesFromPoint(ambulanceLocation);
-            }
-
-            SpatialRDD spatialRDD = GeoJsonReader.readToGeometryRDD(Application.sc, inputLocation);
-            Long pointsCount = spatialRDD.rawSpatialRDD.count();
-            List<LineString> routeList = spatialRDD.rawSpatialRDD.take(pointsCount.intValue());
-            for (LineString route : routeList) {
-                String[] userData = route.getUserData().toString().split("\t");
-                String[] endCoordinates = userData[1]
-                        .substring(1, userData[1].length() - 1)
-                        .split(",");
-                Double x = Double.valueOf(endCoordinates[0]);
-                Double y = Double.valueOf(endCoordinates[1]);
-                Double time = Double.valueOf(userData[2]);
-                GeometryFactory geometryFactory = new GeometryFactory();
-                Point point = geometryFactory.createPoint(new Coordinate(x,y));
-                if(!timeGrid.containsKey(point) || timeGrid.get(point) > time) {
-                    timeGrid.put(point, time);
-                }
-            }
-        }
-        return timeGrid;
     }
 
     public static String fileName(Point point)
     {
         return "routes-" + String.valueOf(point.getX())
                 +"-"+ String.valueOf(point.getY()) +".json";
+    }
+
+    //NEW VERSION
+    static Map<Point, Double> getTimeGrid(List<Point> ambulancePoints)
+    {
+        if(ambulancePoints.isEmpty())
+        {
+            return getEmptyGrid(true);
+        }
+
+        String inputLocation = "allRoutes.json";
+        Path path = Paths.get(inputLocation);
+        if(Files.notExists(path))
+        {
+            OsrmController.downloadRoutes(ambulancePoints, inputLocation);
+        }
+        SpatialRDD<Geometry> allRoutesRDD = GeoJsonReader.readToGeometryRDD(Application.sc, inputLocation);
+
+        List<String> ambulanceCoordinates = getStringCoordinates(ambulancePoints);
+        JavaRDD<Geometry> routesFromAmbulancePointsRDD = allRoutesRDD.rawSpatialRDD
+                .filter(route -> ambulanceCoordinates.contains(getStartCoord(route)));
+
+        JavaPairRDD<Point, Double> timeGrid = routesFromAmbulancePointsRDD
+                .mapToPair(GridController::getPointTime)
+                .reduceByKey((time1,time2) -> (time2 < time1) ? time2 : time1);
+
+        return timeGrid.collectAsMap();
+    }
+
+    private static List<String> getStringCoordinates(List<Point> ambulancePoints)
+    {
+        return ambulancePoints.stream()
+                .map(point ->
+                    String.format(Locale.US, "[%.6f, %.6f]", point.getX(), point.getY()))
+                .collect(Collectors.toList());
+    }
+
+    /*
+    return String "[x, y]" example: "[15.888, 40.222]"
+     */
+    private static String getStartCoord(Geometry route)
+    {
+        String[] userData = route.getUserData()
+                .toString()
+                .split("\t");
+        return userData[0];
+    }
+
+    private static Tuple2<Point, Double> getPointTime(Object route)
+    {
+        String[] userData = ((LineString)route).getUserData()
+                .toString()
+                .split("\t");
+        String[] endCoordinates = userData[1]
+                .substring(1, userData[1].length() - 1)
+                .split(",");
+        Double x = Double.valueOf(endCoordinates[0]);
+        Double y = Double.valueOf(endCoordinates[1]);
+        Double time = Double.valueOf(userData[2]);
+        GeometryFactory geometryFactory = new GeometryFactory();
+        Point point = geometryFactory.createPoint(new Coordinate(x,y));
+        return new Tuple2<>(point, time);
     }
 }
