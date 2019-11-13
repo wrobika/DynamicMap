@@ -1,5 +1,7 @@
 package osrm;
 
+import map.GridController;
+import map.RouteController;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
@@ -16,48 +18,25 @@ import java.util.*;
 import java.util.List;
 
 import com.vividsolutions.jts.geom.Point;
-
-import static map.GridController.fileName;
 import static map.GridController.getGrid;
 
 @Controller
 public class OsrmController
 {
-    public static void downloadRoutesFromPoint(Point startPoint)
-    {
-        String fileName = fileName(startPoint);
-        List<Point> pointGrid = getGrid(false);
-        for(Point point : pointGrid)
-        {
-            List<Point> points = Collections.singletonList(startPoint);
-            points.add(point);
-            try
-            {
-                String response = getRouteResponse(points);
-                JSONObject route = createRouteFromResponse(response);
-                writeRouteToFile(fileName, route.toString());
-            }
-            catch(Exception ex)
-            {
-                System.out.println(ex.getMessage());
-            }
-        }
-    }
-
-    public static void downloadRoutes(List<Point> ambulancePoints, String fileName)
+    //TODO: sprawdzic czy pobral cala siatke
+    public static void downloadRoutes(List<Point> ambulancePoints)
     {
         List<Point> gridPoints = getGrid(false);
         for (Point ambulance: ambulancePoints)
         {
             for(Point pointFromGrid : gridPoints)
             {
-                List<Point> startEndPoints = Collections.singletonList(ambulance);
-                startEndPoints.add(pointFromGrid);
+                List<Point> startEndPoints = Arrays.asList(ambulance, pointFromGrid);
                 try
                 {
                     String response = getRouteResponse(startEndPoints);
                     JSONObject route = createRouteFromResponse(response);
-                    writeRouteToFile(fileName, route.toString());
+                    writeRouteToFile(RouteController.allRoutesLocation, route.toString());
                 }
                 catch(Exception ex)
                 {
@@ -75,9 +54,9 @@ public class OsrmController
         {
             URIBuilder builder = new URIBuilder();
             builder.setScheme("http");
-            //builder.setHost("127.0.0.1");
-            //builder.setPort(5000);
-            builder.setHost("router.project-osrm.org");
+            builder.setHost("127.0.0.1");
+            builder.setPort(5000);
+            //builder.setHost("router.project-osrm.org");
             builder.setPath(path);
             parameters.forEach(builder::addParameter);
             URL url = builder.build().toURL();

@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static map.RDDController.getRoutesRDDFromFiles;
+import static map.RouteController.findIntersectedRoutes;
 import static osrm.OsrmController.getHttpResponse;
 import static osrm.OsrmController.pointsToString;
 
@@ -119,22 +119,5 @@ public class UpdateController
         {
             System.out.println(ex.getMessage());
         }
-    }
-
-    private static JavaRDD findIntersectedRoutes(LineString road)
-    {
-        JavaRDD intersectedRoutesRDD = Application.sc.emptyRDD();
-        try
-        {
-            JavaRDD<Geometry> allRoutesRDD = getRoutesRDDFromFiles();
-            SpatialRDD<Geometry> allRoutesSpatialRDD = new SpatialRDD<>();
-            allRoutesSpatialRDD.setRawSpatialRDD(allRoutesRDD);
-            intersectedRoutesRDD = RangeQuery.SpatialRangeQuery(allRoutesSpatialRDD, road, true, false);
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-        return intersectedRoutesRDD;
     }
 }
