@@ -2,10 +2,12 @@ package map;
 
 import com.vividsolutions.jts.geom.*;
 import com.vividsolutions.jts.io.WKTReader;
+import org.apache.commons.math3.util.Precision;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -38,6 +40,8 @@ public class MapController {
             {
                 Double x = Double.valueOf(coordinates.get(i));
                 Double y = Double.valueOf(coordinates.get(i+1));
+                x = Precision.round(x, 6);
+                y = Precision.round(y, 6);
                 Point point = geometryFactory.createPoint(new Coordinate(x,y));
                 ambulancePoints.add(point);
             }
@@ -70,12 +74,18 @@ public class MapController {
                 Coordinate[] coordinates = geometry.getCoordinates();
                 for (Coordinate coord : coordinates)
                 {
-                    ambulancePoints.add(geometryFactory.createPoint(coord));
+                    Double x = Precision.round(coord.x, 6);
+                    Double y = Precision.round(coord.y, 6);
+                    Coordinate roundCoord = new Coordinate(x,y);
+                    ambulancePoints.add(geometryFactory.createPoint(roundCoord));
                 }
             }
             else if(geometry instanceof Point)
             {
-                ambulancePoints.add(geometryFactory.createPoint(geometry.getCoordinate()));
+                Double x = Precision.round(geometry.getCoordinate().x, 6);
+                Double y = Precision.round(geometry.getCoordinate().y, 6);
+                Coordinate roundCoord = new Coordinate(x,y);
+                ambulancePoints.add(geometryFactory.createPoint(roundCoord));
             }
         }
         catch(Exception ex)
@@ -91,21 +101,15 @@ public class MapController {
     {
         try
         {
-            List<Point> roadPoints = new ArrayList<>();
-            GeometryFactory geometryFactory = new GeometryFactory();
             WKTReader wktReader = new WKTReader();
             Geometry geometry = wktReader.read(roadToUpdate);
-            Coordinate[] coordinates = geometry.getCoordinates();
-            for (Coordinate coord : coordinates)
-            {
-                roadPoints.add(geometryFactory.createPoint(coord));
-            }
-            List nodes = updateRoads(roadPoints);
+            List<Coordinate> coordinates = Arrays.asList(geometry.getCoordinates());
+            updateRoads(coordinates);
         }
         catch(Exception ex)
         {
             System.out.println(ex.getMessage());
         }
-        return null;
+        return getEmptyGrid(true);
     }
 }

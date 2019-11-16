@@ -1,6 +1,6 @@
 package osrm;
 
-import map.GridController;
+import com.vividsolutions.jts.geom.*;
 import map.RouteController;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -9,34 +9,45 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
-import org.json.JSONArray;
+import org.geotools.geojson.geom.GeometryJSON;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
+
 import java.io.*;
 import java.net.URL;
 import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import com.vividsolutions.jts.geom.Point;
 import static map.GridController.getGrid;
 
 @Controller
 public class OsrmController
 {
+    static Geometry downloadOneRoute(Coordinate start, Coordinate end) throws Exception
+    {
+        List<Coordinate> startEndPoints = Arrays.asList(start, end);
+        String response = getRouteResponse(startEndPoints);
+        return createLineStringRoute(response);
+    }
+
     //TODO: sprawdzic czy pobral cala siatke
-    public static void downloadRoutes(List<Point> ambulancePoints)
+    public static void downloadRoutes(List<Coordinate> startCoords)
     {
         List<Point> gridPoints = getGrid(false);
-        for (Point ambulance: ambulancePoints)
+        List<Coordinate> gridCoordinates = gridPoints.stream()
+                .map(Point::getCoordinate)
+                .collect(Collectors.toList());
+        for (Coordinate start: startCoords)
         {
-            for(Point pointFromGrid : gridPoints)
+            for(Coordinate coordFromGrid : gridCoordinates)
             {
-                List<Point> startEndPoints = Arrays.asList(ambulance, pointFromGrid);
+                List<Coordinate> startEndCoord = Arrays.asList(start, coordFromGrid);
                 try
                 {
-                    String response = getRouteResponse(startEndPoints);
-                    JSONObject route = createRouteFromResponse(response);
-                    writeRouteToFile(RouteController.allRoutesLocation, route.toString());
+                    String response = getRouteResponse(startEndCoord);
+                    LineString route = createLineStringRoute(response);
+                    writeRouteToFile(RouteController.routesOSRMLocation, route);
                 }
                 catch(Exception ex)
                 {
@@ -73,23 +84,23 @@ public class OsrmController
         }
     }
 
-    private static String getRouteResponse(List<Point> points) throws Exception
+    private static String getRouteResponse(List<Coordinate> coordinates) throws Exception
     {
-        if(points.size() < 2)
+        if(coordinates.size() < 2)
             throw new Exception("too few points to set route");
-        String pointsString = pointsToString(points);
+        String pointsString = coordinatesToString(coordinates);
         String path = "/route/v1/driving/" + pointsString;
         Map<String, String> parameters = new HashMap<>();
         parameters.put("geometries","geojson");
         return getHttpResponse(path,parameters);
     }
 
-    private static void writeRouteToFile(String fileName, String routeJSON)
+    private static void writeRouteToFile(String fileName, LineString route)
     {
         try
         {
             BufferedWriter writer = new BufferedWriter(new FileWriter(fileName, true));
-            writer.append(routeJSON);
+            writer.append(route.toString());
             writer.append('\n');
             writer.close();
         }
@@ -99,43 +110,41 @@ public class OsrmController
         }
     }
 
-    private static JSONObject createRouteFromResponse(String response)
+    private static LineString createLineStringRoute(String response)
     {
-        JSONObject responseJSON = new JSONObject(response);
-        JSONArray startPoint = responseJSON
-                .getJSONArray("waypoints")
-                .getJSONObject(0)
-                .getJSONArray("location");
-        JSONArray endPoint = responseJSON
-                .getJSONArray("waypoints")
-                .getJSONObject(1)
-                .getJSONArray("location");
-        Double time = responseJSON
-                .getJSONArray("routes")
-                .getJSONObject(0)
-                .getDouble("duration");
-        JSONObject geometry = responseJSON
-                .getJSONArray("routes")
-                .getJSONObject(0)
-                .getJSONObject("geometry");
-        return new JSONObject()
-                .put("geometry", geometry)
-                .put("properties", new JSONObject()
-                        .put("time", time)
-                        .put("start", startPoint)
-                        .put("end", endPoint)
-                )
-                .put("type", "Feature");
+        try
+        {
+            JSONObject responseJSON = new JSONObject(response);
+            Double time = responseJSON
+                    .getJSONArray("routes")
+                    .getJSONObject(0)
+                    .getDouble("duration");
+            String geometryString = responseJSON
+                    .getJSONArray("routes")
+                    .getJSONObject(0)
+                    .getJSONObject("geometry")
+                    .toString();
+            GeometryJSON geometryJSON = new GeometryJSON();
+            LineString route = geometryJSON.readLine(geometryString);
+            route.setUserData(time);
+            return route;
+        }
+        catch(IOException ex)
+        {
+            ex.printStackTrace();
+            //TODO: ojojojojojojojoj
+            return null;
+        }
     }
 
-    static String pointsToString(List<Point> points)
+    static String coordinatesToString(List<Coordinate> coordinates)
     {
         StringBuilder result = new StringBuilder();
 
-        for (Point point : points) {
-            result.append(point.getX());
+        for (Coordinate coordinate : coordinates) {
+            result.append(coordinate.x);
             result.append(",");
-            result.append(point.getY());
+            result.append(coordinate.y);
             result.append(";");
         }
 

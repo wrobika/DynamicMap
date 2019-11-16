@@ -1,10 +1,7 @@
 package osrm;
 
 import com.vividsolutions.jts.geom.*;
-import map.Application;
 import org.apache.spark.api.java.JavaRDD;
-import org.datasyslab.geospark.spatialOperator.RangeQuery;
-import org.datasyslab.geospark.spatialRDD.SpatialRDD;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -15,43 +12,42 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static map.RouteController.findIntersectedRoutes;
-import static osrm.OsrmController.getHttpResponse;
-import static osrm.OsrmController.pointsToString;
+import static map.RouteController.*;
+import static osrm.OsrmController.*;
 
 public class UpdateController
 {
-    public static List updateRoads(List<Point> points)
+    public static void updateRoads(List<Coordinate> points)
     {
-        JSONObject responseJSON = new JSONObject();
-        do
+        try
         {
-            try
+            String response = getTripResponse(points);
+            JSONObject responseJSON = new JSONObject(response);
+            List nodes = getRoadNodes(responseJSON);
+            if(!nodes.isEmpty())
             {
-                String response = getTripResponse(points);
-                responseJSON = new JSONObject(response);
+                //writeUpdateFile(nodes);
+                //restartOSRM();
+                LineString road = getRoad(responseJSON);
+                JavaRDD<Geometry> intersectedRoutesRDD = findIntersectedRoutes(road);
+                JavaRDD<Geometry> newRoutesRDD = intersectedRoutesRDD.map(route ->
+                    downloadOneRoute(getStartCoord(route), getEndCoord(route))
+                );
+                replaceRoutes(intersectedRoutesRDD, newRoutesRDD);
             }
-            catch(Exception ex)
-            {
-                System.out.println(ex.getMessage());
-            }
-        } while (!responseJSON.has("trips"));
-        List nodes = getRoadNodes(responseJSON);
-        if(!nodes.isEmpty())
-        {
-            writeUpdateFile(nodes);
-            LineString road = getRoad(responseJSON);
-            JavaRDD intersectedRoutesRDD = findIntersectedRoutes(road);
         }
-        return nodes;
+        catch(Exception ex)
+        {
+            ex.printStackTrace();
+        }
     }
 
-    private static String getTripResponse(List<Point> points) throws Exception
+    private static String getTripResponse(List<Coordinate> coordinates) throws Exception
     {
-        if(points.size() < 2)
+        if(coordinates.size() < 2)
             throw new Exception("too few points to set route");
-        String pointsString = pointsToString(points);
-        String path = "/trip/v1/driving/" + pointsString;
+        String coordinatesString = coordinatesToString(coordinates);
+        String path = "/trip/v1/driving/" + coordinatesString;
         Map<String, String> parameters = new HashMap<>();
         parameters.put("source","first");
         parameters.put("destination","last");
@@ -118,6 +114,22 @@ public class UpdateController
         catch(IOException ex)
         {
             System.out.println(ex.getMessage());
+        }
+    }
+
+    private static void restartOSRM()
+    {
+        try
+        {
+            Process process = Runtime.getRuntime().exec("~/osrm-backend/update.sh");
+            if (process.exitValue() != 0)
+            {
+                System.out.println(process.exitValue() + ": error while update road speed");
+            }
+        }
+        catch(IOException ex)
+        {
+            ex.printStackTrace();
         }
     }
 }

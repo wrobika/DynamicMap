@@ -3,26 +3,23 @@ package map;
 import com.vividsolutions.jts.geom.*;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.storage.StorageLevel;
 import org.datasyslab.geospark.enums.FileDataSplitter;
-import org.datasyslab.geospark.formatMapper.GeoJsonReader;
 import org.datasyslab.geospark.formatMapper.shapefileParser.ShapefileReader;
 import org.datasyslab.geospark.spatialRDD.PointRDD;
 import org.datasyslab.geospark.spatialRDD.PolygonRDD;
 import org.datasyslab.geospark.spatialRDD.SpatialRDD;
+import org.opengis.geometry.PrecisionType;
 import osrm.OsrmController;
 import scala.Tuple2;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.lang.Math.cos;
 import static map.RouteController.getAllRoutesRDD;
+import static map.RouteController.getStartCoord;
 
 public class GridController
 {
@@ -97,11 +94,15 @@ public class GridController
             return getEmptyGrid(true);
         }
         SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
-        List<String> ambulanceCoordinates = mapToStringCoordinatesList(ambulancePoints);
+
+        List<Coordinate> ambulanceCoordinates = ambulancePoints.stream()
+                .map(Point::getCoordinate)
+                .collect(Collectors.toList());
         JavaRDD<Geometry> routesFromAmbulancePointsRDD = allRoutesRDD.rawSpatialRDD
                 .filter(route -> ambulanceCoordinates.contains(getStartCoord(route)));
+
         long foundAmbulanceCoordCount = routesFromAmbulancePointsRDD
-                .map(GridController::getStartCoord)
+                .map(RouteController::getStartCoord)
                 .distinct().count();
         if(foundAmbulanceCoordCount < ambulanceCoordinates.size())
         {
@@ -113,16 +114,16 @@ public class GridController
         return timeGrid.collectAsMap();
     }
 
-    private static JavaRDD<Geometry> downloadMissingData(List<String> ambulanceCoordinates, JavaRDD<Geometry> routesFromAmbulancePointsRDD)
+    private static JavaRDD<Geometry> downloadMissingData(List<Coordinate> ambulanceCoordinates, JavaRDD<Geometry> routesFromAmbulancePointsRDD)
     {
-        List<String> foundAmbulanceCoordinates = routesFromAmbulancePointsRDD
-                .map(GridController::getStartCoord)
+        List<Coordinate> foundAmbulanceCoordinates = routesFromAmbulancePointsRDD
+                .map(RouteController::getStartCoord)
                 .distinct()
                 .collect();
-        List<String> coordinatesToDownload = new ArrayList<>(ambulanceCoordinates);
+        List<Coordinate> coordinatesToDownload = new ArrayList<>(ambulanceCoordinates);
         coordinatesToDownload.removeAll(foundAmbulanceCoordinates);
-        List<Point> pointsToDownload = mapToPointList(coordinatesToDownload);
-        OsrmController.downloadRoutes(pointsToDownload);
+        OsrmController.downloadRoutes(coordinatesToDownload);
+
 
         SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
         //lub nie filtrowac na nowo, tylko dolaczyc pobrane
@@ -131,54 +132,10 @@ public class GridController
         return routesFromAmbulancePointsRDD;
     }
 
-
-
-    private static List<Point> mapToPointList(List<String> stringCoordinatesList)
+    private static Tuple2<Point, Double> getPointTime(Geometry route)
     {
-        return stringCoordinatesList.stream()
-                .map(GridController::mapToPoint)
-                .collect(Collectors.toList());
-    }
-
-    private static List<String> mapToStringCoordinatesList(List<Point> ambulancePoints)
-    {
-        return ambulancePoints.stream()
-                .map(point ->
-                    String.format(Locale.US, "[%.6f, %.6f]", point.getX(), point.getY()))
-                .collect(Collectors.toList());
-    }
-
-    /*
-    return String "[x, y]" example: "[15.888, 40.222]"
-     */
-    private static String getStartCoord(Geometry route)
-    {
-        String[] userData = route.getUserData()
-                .toString()
-                .split("\t");
-        return userData[0];
-    }
-
-    private static Tuple2<Point, Double> getPointTime(Object route)
-    {
-        String[] userData = ((LineString)route).getUserData()
-                .toString()
-                .split("\t");
-        Point point = mapToPoint(userData[1]);
-        Double time = Double.valueOf(userData[2]);
+        Point point = ((LineString) route).getEndPoint();
+        Double time = Double.valueOf(route.getUserData().toString());
         return new Tuple2<>(point, time);
-    }
-
-    private static Point mapToPoint(String stringCoordinates)
-    {
-        if(stringCoordinates.startsWith("["))
-        {
-            stringCoordinates = stringCoordinates.substring(1, stringCoordinates.length() - 1);
-        }
-        String[] coordinates = stringCoordinates.split(",");
-        Double x = Double.valueOf(coordinates[0]);
-        Double y = Double.valueOf(coordinates[1]);
-        GeometryFactory geometryFactory = new GeometryFactory();
-        return geometryFactory.createPoint(new Coordinate(x,y));
     }
 }
