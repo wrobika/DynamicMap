@@ -23,11 +23,19 @@ public class UpdateController
         {
             String response = getTripResponse(points);
             JSONObject responseJSON = new JSONObject(response);
-            List nodes = getRoadNodes(responseJSON);
+            List nodes = new ArrayList();
+            if(responseJSON.get("code").equals("Ok"))
+            {
+                nodes = getRoadNodes(responseJSON);
+            }
+            else
+            {
+                //TODO: pobiranie pojedynczo nearest node
+            }
             if(!nodes.isEmpty())
             {
-                //writeUpdateFile(nodes);
-                //restartOSRM();
+                writeUpdateFile(nodes);
+                restartOSRM();
                 LineString road = getRoad(responseJSON);
                 JavaRDD<Geometry> intersectedRoutesRDD = findIntersectedRoutes(road);
                 JavaRDD<Geometry> newRoutesRDD = intersectedRoutesRDD.map(route ->
@@ -121,13 +129,13 @@ public class UpdateController
     {
         try
         {
-            Process process = Runtime.getRuntime().exec("~/osrm-backend/update.sh");
-            if (process.exitValue() != 0)
+            Process process = Runtime.getRuntime().exec("./updateOSRM.sh");
+            if (process.waitFor() != 0)
             {
                 System.out.println(process.exitValue() + ": error while update road speed");
             }
         }
-        catch(IOException ex)
+        catch(IOException | InterruptedException ex)
         {
             ex.printStackTrace();
         }

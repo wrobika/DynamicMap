@@ -8,12 +8,12 @@ import org.datasyslab.geospark.formatMapper.shapefileParser.ShapefileReader;
 import org.datasyslab.geospark.spatialRDD.PointRDD;
 import org.datasyslab.geospark.spatialRDD.PolygonRDD;
 import org.datasyslab.geospark.spatialRDD.SpatialRDD;
-import org.opengis.geometry.PrecisionType;
 import osrm.OsrmController;
 import scala.Tuple2;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -87,17 +87,14 @@ public class GridController
         return emptyGrid;
     }
 
-    static Map<Point, Double> getTimeGrid(List<Point> ambulancePoints)
+    static Map<Point, Double> getTimeGrid(List<Coordinate> ambulanceCoordinates) throws IOException
     {
-        if(ambulancePoints.isEmpty())
+        if(ambulanceCoordinates.isEmpty())
         {
             return getEmptyGrid(true);
         }
         SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
 
-        List<Coordinate> ambulanceCoordinates = ambulancePoints.stream()
-                .map(Point::getCoordinate)
-                .collect(Collectors.toList());
         JavaRDD<Geometry> routesFromAmbulancePointsRDD = allRoutesRDD.rawSpatialRDD
                 .filter(route -> ambulanceCoordinates.contains(getStartCoord(route)));
 
@@ -114,7 +111,8 @@ public class GridController
         return timeGrid.collectAsMap();
     }
 
-    private static JavaRDD<Geometry> downloadMissingData(List<Coordinate> ambulanceCoordinates, JavaRDD<Geometry> routesFromAmbulancePointsRDD)
+    private static JavaRDD<Geometry> downloadMissingData(List<Coordinate> ambulanceCoordinates,
+                                                         JavaRDD<Geometry> routesFromAmbulancePointsRDD) throws IOException
     {
         List<Coordinate> foundAmbulanceCoordinates = routesFromAmbulancePointsRDD
                 .map(RouteController::getStartCoord)
@@ -123,7 +121,6 @@ public class GridController
         List<Coordinate> coordinatesToDownload = new ArrayList<>(ambulanceCoordinates);
         coordinatesToDownload.removeAll(foundAmbulanceCoordinates);
         OsrmController.downloadRoutes(coordinatesToDownload);
-
 
         SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
         //lub nie filtrowac na nowo, tylko dolaczyc pobrane

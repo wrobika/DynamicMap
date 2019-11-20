@@ -7,6 +7,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.conn.HttpHostConnectException;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.geotools.geojson.geom.GeometryJSON;
@@ -51,37 +52,48 @@ public class OsrmController
                 }
                 catch(Exception ex)
                 {
-                    System.out.println(ex.getMessage());
+                    ex.printStackTrace();
                 }
             }
         }
     }
 
-    static String getHttpResponse(String path, Map<String, String> parameters)
+    static String getHttpResponse(String path, Map<String, String> parameters) throws Exception
     {
         //TODO: stop, gdy nie uruchomiony serwer osrm
         //osrm-routed --algorithm=MLD malopolskie-latest.osrm
-        try
-        {
-            URIBuilder builder = new URIBuilder();
-            builder.setScheme("http");
-            builder.setHost("127.0.0.1");
-            builder.setPort(5000);
-            //builder.setHost("router.project-osrm.org");
-            builder.setPath(path);
-            parameters.forEach(builder::addParameter);
-            URL url = builder.build().toURL();
-
-            HttpClient client = HttpClientBuilder.create().build();
+        URIBuilder builder = new URIBuilder();
+        builder.setScheme("http");
+        builder.setHost("127.0.0.1");
+        builder.setPort(5000);
+        //builder.setHost("router.project-osrm.org");
+        builder.setPath(path);
+        parameters.forEach(builder::addParameter);
+        URL url = builder.build().toURL();
+        HttpClient client = HttpClientBuilder.create().build();
+        //troche to śmiszne, ale...
+        //TODO: zrobic jakiego pinga
+        try {
             HttpResponse response = client.execute(new HttpGet(url.toString()));
             HttpEntity entityResponse = response.getEntity();
             return EntityUtils.toString(entityResponse, "UTF-8");
+        } catch (HttpHostConnectException ex) {
+            Runtime.getRuntime().exec("./startOSRM.sh");
+            Thread.sleep(4000);
         }
-        catch(Exception ex)
+        for(int i=0; i<3; i++)
         {
-            System.out.println(ex.getMessage());
-            return "";
+            try {
+                HttpResponse response = client.execute(new HttpGet(url.toString()));
+                HttpEntity entityResponse = response.getEntity();
+                return EntityUtils.toString(entityResponse, "UTF-8");
+            } catch (HttpHostConnectException ex) {
+                Thread.sleep(4000);
+            }
         }
+        HttpResponse response = client.execute(new HttpGet(url.toString()));
+        HttpEntity entityResponse = response.getEntity();
+        return EntityUtils.toString(entityResponse, "UTF-8");
     }
 
     private static String getRouteResponse(List<Coordinate> coordinates) throws Exception

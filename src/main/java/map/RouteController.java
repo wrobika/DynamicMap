@@ -3,35 +3,34 @@ package map;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.LineString;
-import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.api.java.JavaRDD;
 import org.datasyslab.geospark.formatMapper.WktReader;
 import org.datasyslab.geospark.spatialOperator.RangeQuery;
 import org.datasyslab.geospark.spatialRDD.SpatialRDD;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 public class RouteController
 {
-    public static String routesOSRMLocation = "allRoutesOSRM.csv";
+    public static String routesOSRMLocation = "allRoutesOSRM";
     private static String routesGeoSparkLocation = "allRoutes";
 
-    static SpatialRDD<Geometry> getAllRoutesRDD()
+    static SpatialRDD<Geometry> getAllRoutesRDD() throws IOException
     {
-        Path path = Paths.get(routesGeoSparkLocation);
-        if(Files.notExists(path))
+        FileSystem hdfs = FileSystem.get(Application.sc.hadoopConfiguration());
+        Path path = new Path(routesGeoSparkLocation);
+        if(!hdfs.exists(path))
         {
-            path = Paths.get(routesOSRMLocation);
-            if(Files.notExists(path))
+            path = new org.apache.hadoop.fs.Path(routesOSRMLocation);
+            if(!hdfs.exists(path))
             {
                 SpatialRDD<Geometry> emptyRDD = new SpatialRDD<>();
                 emptyRDD.setRawSpatialRDD(Application.sc.emptyRDD());
                 return emptyRDD;
             }
+            return WktReader.readToGeometryRDD(Application.sc, routesOSRMLocation, 0, true, false);
         }
         return WktReader.readToGeometryRDD(Application.sc, routesGeoSparkLocation, 0, true, false);
     }
@@ -61,7 +60,6 @@ public class RouteController
             JavaRDD<Geometry> replacedRDD = subtractedRDD.union(elementsReplacingRDD);
             allRoutesRDD.setRawSpatialRDD(replacedRDD);
             //TODO: jakiś backup
-            FileUtils.deleteDirectory(new File(routesGeoSparkLocation));
             allRoutesRDD.rawSpatialRDD.saveAsTextFile(routesGeoSparkLocation);
         }
         catch(IOException ex)
@@ -72,13 +70,11 @@ public class RouteController
 
     public static Coordinate getStartCoord(Geometry route)
     {
-        return route.getCoordinates()[0];
+        return ((LineString)route).getStartPoint().getCoordinate();
     }
 
     public static Coordinate getEndCoord(Geometry route)
     {
-        Coordinate[] coordinates = route.getCoordinates();
-        int length = coordinates.length;
-        return coordinates[length-1];
+        return ((LineString)route).getEndPoint().getCoordinate();
     }
 }
