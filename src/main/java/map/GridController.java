@@ -8,12 +8,11 @@ import org.datasyslab.geospark.formatMapper.shapefileParser.ShapefileReader;
 import org.datasyslab.geospark.spatialRDD.PointRDD;
 import org.datasyslab.geospark.spatialRDD.PolygonRDD;
 import org.datasyslab.geospark.spatialRDD.SpatialRDD;
-import osrm.OsrmController;
+import osrm.DownloadController;
 import scala.Tuple2;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -23,6 +22,11 @@ import static map.RouteController.getStartCoord;
 
 public class GridController
 {
+
+    private static final String irregularGridFile = "/home/weronika/magisterka/DynamicMap/irregularGrid.csv";
+    private static final String regularGridFile = "/home/weronika/magisterka/DynamicMap/grid.csv";
+    private static final String boundaryKrakowLocation = "/home/weronika/magisterka/granicaKrakowa";
+
     public static void createGrid()
     {
         //TODO:zrobic pisanie przez geosparka
@@ -42,8 +46,7 @@ public class GridController
                 }
             }
 
-            String shapefileInputLocation = "/home/weronika/magisterka/granicaKrakowa";
-            SpatialRDD krakowRDD = ShapefileReader.readToGeometryRDD(Application.sc, shapefileInputLocation);
+            SpatialRDD krakowRDD = ShapefileReader.readToGeometryRDD(Application.sc, boundaryKrakowLocation);
             PolygonRDD krakowPolygonRDD = ShapefileReader.geometryToPolygon(krakowRDD);
             Polygon krakowPolygon = krakowPolygonRDD.rawSpatialRDD.first();
 
@@ -65,10 +68,10 @@ public class GridController
 
     public static List<Point> getGrid(boolean fitToRoadNetwork)
     {
-        String pointRDDInputLocation = "/home/weronika/magisterka/DynamicMap/irregularGrid.csv";
+        String pointRDDInputLocation = irregularGridFile;
         if(!fitToRoadNetwork)
         {
-            pointRDDInputLocation = "/home/weronika/magisterka/DynamicMap/grid.csv";
+            pointRDDInputLocation = regularGridFile;
         }
         int pointRDDOffset = 0;
         FileDataSplitter pointRDDSplitter = FileDataSplitter.CSV;
@@ -87,7 +90,7 @@ public class GridController
         return emptyGrid;
     }
 
-    static Map<Point, Double> getTimeGrid(List<Coordinate> ambulanceCoordinates) throws IOException
+    static Map<Point, Double> getTimeGrid(List<Coordinate> ambulanceCoordinates) throws Exception
     {
         if(ambulanceCoordinates.isEmpty())
         {
@@ -112,7 +115,7 @@ public class GridController
     }
 
     private static JavaRDD<Geometry> downloadMissingData(List<Coordinate> ambulanceCoordinates,
-                                                         JavaRDD<Geometry> routesFromAmbulancePointsRDD) throws IOException
+                                                         JavaRDD<Geometry> routesFromAmbulancePointsRDD) throws Exception
     {
         List<Coordinate> foundAmbulanceCoordinates = routesFromAmbulancePointsRDD
                 .map(RouteController::getStartCoord)
@@ -120,10 +123,10 @@ public class GridController
                 .collect();
         List<Coordinate> coordinatesToDownload = new ArrayList<>(ambulanceCoordinates);
         coordinatesToDownload.removeAll(foundAmbulanceCoordinates);
-        OsrmController.downloadRoutes(coordinatesToDownload);
+        DownloadController.downloadRoutes(coordinatesToDownload);
 
         SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
-        //lub nie filtrowac na nowo, tylko dolaczyc pobrane
+        //lub nie filtrowac allRoutes na nowo, tylko dolaczyc pobrane do routesFromAmbulancePointsRDD
         routesFromAmbulancePointsRDD = allRoutesRDD.rawSpatialRDD
                 .filter(route -> ambulanceCoordinates.contains(getStartCoord(route)));
         return routesFromAmbulancePointsRDD;

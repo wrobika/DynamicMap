@@ -11,61 +11,48 @@ import org.datasyslab.geospark.spatialOperator.RangeQuery;
 import org.datasyslab.geospark.spatialRDD.SpatialRDD;
 
 import java.io.IOException;
+import java.util.List;
 
 public class RouteController
 {
-    public static String routesOSRMLocation = "allRoutesOSRM";
-    private static String routesGeoSparkLocation = "allRoutes";
+    private static final String allRoutesLocation = "allRoutes";
 
     static SpatialRDD<Geometry> getAllRoutesRDD() throws IOException
     {
         FileSystem hdfs = FileSystem.get(Application.sc.hadoopConfiguration());
-        Path path = new Path(routesGeoSparkLocation);
+        Path path = new Path(allRoutesLocation);
         if(!hdfs.exists(path))
         {
-            path = new org.apache.hadoop.fs.Path(routesOSRMLocation);
-            if(!hdfs.exists(path))
-            {
-                SpatialRDD<Geometry> emptyRDD = new SpatialRDD<>();
-                emptyRDD.setRawSpatialRDD(Application.sc.emptyRDD());
-                return emptyRDD;
-            }
-            return WktReader.readToGeometryRDD(Application.sc, routesOSRMLocation, 0, true, false);
+            SpatialRDD<Geometry> emptyRDD = new SpatialRDD<>();
+            emptyRDD.setRawSpatialRDD(Application.sc.emptyRDD());
+            return emptyRDD;
         }
-        return WktReader.readToGeometryRDD(Application.sc, routesGeoSparkLocation, 0, true, false);
+        return WktReader.readToGeometryRDD(Application.sc, allRoutesLocation, 0, true, false);
     }
 
-    public static JavaRDD<Geometry> findIntersectedRoutes(LineString road)
+    public static JavaRDD<Geometry> findIntersectedRoutes(LineString road) throws Exception
     {
-        JavaRDD<Geometry> intersectedRoutesRDD = Application.sc.emptyRDD();
-        try
-        {
-            SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
-            intersectedRoutesRDD = RangeQuery.SpatialRangeQuery(allRoutesRDD, road, true, false);
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-        return intersectedRoutesRDD;
+        SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
+        return RangeQuery.SpatialRangeQuery(allRoutesRDD, road, true, false);
     }
 
     public static void replaceRoutes(JavaRDD<Geometry> elementsToReplaceRDD,
-                                     JavaRDD<Geometry> elementsReplacingRDD)
+                                     JavaRDD<Geometry> elementsReplacingRDD) throws IOException
     {
-        try {
-            SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
-            JavaRDD<Geometry> subtractedRDD = allRoutesRDD.rawSpatialRDD
-                    .subtract(elementsToReplaceRDD);
-            JavaRDD<Geometry> replacedRDD = subtractedRDD.union(elementsReplacingRDD);
-            allRoutesRDD.setRawSpatialRDD(replacedRDD);
-            //TODO: jakiś backup
-            allRoutesRDD.rawSpatialRDD.saveAsTextFile(routesGeoSparkLocation);
-        }
-        catch(IOException ex)
-        {
-            ex.printStackTrace();
-        }
+        SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
+        JavaRDD<Geometry> subtractedRDD = allRoutesRDD.rawSpatialRDD
+                .subtract(elementsToReplaceRDD);
+        JavaRDD<Geometry> replacedRDD = subtractedRDD.union(elementsReplacingRDD);
+        //TODO: jakiś backup
+        replacedRDD.saveAsTextFile(allRoutesLocation);
+    }
+
+    public static void addNewRoutes(List<Geometry> newRoutes) throws IOException
+    {
+        JavaRDD<Geometry> newRoutesRDD = Application.sc.parallelize(newRoutes);
+        SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
+        JavaRDD<Geometry> unionRDD = allRoutesRDD.rawSpatialRDD.union(newRoutesRDD);
+        unionRDD.saveAsTextFile(allRoutesLocation);
     }
 
     public static Coordinate getStartCoord(Geometry route)

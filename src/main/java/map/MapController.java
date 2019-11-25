@@ -1,6 +1,7 @@
 package map;
 
 import com.vividsolutions.jts.geom.*;
+import com.vividsolutions.jts.geom.util.GeometryExtracter;
 import com.vividsolutions.jts.io.WKTReader;
 import org.apache.commons.math3.util.Precision;
 import org.springframework.stereotype.Controller;
@@ -15,6 +16,7 @@ import java.util.Map;
 
 import static map.GridController.getEmptyGrid;
 import static map.GridController.getTimeGrid;
+import static osrm.UpdateController.getModifiedRoads;
 import static osrm.UpdateController.updateRoads;
 
 @Controller
@@ -23,25 +25,26 @@ public class MapController {
     @GetMapping("/map2")
     public String map2(@RequestParam(required=false) List<String> coordinates, Model model)
     {
+        Map<Point, Double> timePoints;
+        List<Coordinate> ambulanceCoordinates = new ArrayList<>();
+        for (int i = 0; i < coordinates.size(); i += 2) {
+            Double x = Double.valueOf(coordinates.get(i));
+            Double y = Double.valueOf(coordinates.get(i + 1));
+            x = Precision.round(x, 6);
+            y = Precision.round(y, 6);
+            ambulanceCoordinates.add(new Coordinate(x, y));
+        }
         try
         {
-            Map<Point, Double> timePoints;
-            List<Coordinate> ambulanceCoordinates = new ArrayList<>();
-            for (int i = 0; i < coordinates.size(); i += 2) {
-                Double x = Double.valueOf(coordinates.get(i));
-                Double y = Double.valueOf(coordinates.get(i + 1));
-                x = Precision.round(x, 6);
-                y = Precision.round(y, 6);
-                ambulanceCoordinates.add(new Coordinate(x, y));
-            }
-            Application.ambulanceCoordinates = ambulanceCoordinates;
             timePoints = getTimeGrid(ambulanceCoordinates);
-            model.addAttribute("points", timePoints);
         }
-        catch(IOException ex)
+        catch(Exception ex)
         {
             ex.printStackTrace();
+            timePoints = getEmptyGrid(true);
         }
+        Application.ambulanceCoordinates = ambulanceCoordinates;
+        model.addAttribute("points", timePoints);
         return "map";
     }
 
@@ -50,6 +53,15 @@ public class MapController {
     {
         Map<Point, Double> timePoints = getEmptyGrid(true);
         model.addAttribute("points", timePoints);
+        try
+        {
+            List<String> modifiedRoads = getModifiedRoads();
+            model.addAttribute("roads", modifiedRoads);
+        }
+        catch(IOException ex)
+        {
+            ex.printStackTrace();
+        }
         return "map";
     }
 
@@ -58,18 +70,21 @@ public class MapController {
     Map<Point, Double> grid(@RequestBody String ambulancePoints)
     {
         List<Coordinate> ambulanceCoordinates = new ArrayList<>();
+        WKTReader wktReader = new WKTReader();
+        Map<Point, Double> timeGrid;
         try
         {
-            WKTReader wktReader = new WKTReader();
             Geometry geometry = wktReader.read(ambulancePoints);
             if(geometry instanceof GeometryCollection)
             {
-                Coordinate[] coordinates = geometry.getCoordinates();
-                for (Coordinate coord : coordinates)
-                {
+                List<Point> points = new ArrayList<>();
+                GeometryExtracter pointFilter = new GeometryExtracter(Point.class, points);
+                geometry.apply(pointFilter);
+                for (Point point : points) {
+                    Coordinate coord = point.getCoordinate();
                     Double x = Precision.round(coord.x, 6);
                     Double y = Precision.round(coord.y, 6);
-                    Coordinate roundCoord = new Coordinate(x,y);
+                    Coordinate roundCoord = new Coordinate(x, y);
                     ambulanceCoordinates.add(roundCoord);
                 }
             }
@@ -80,14 +95,16 @@ public class MapController {
                 Coordinate roundCoord = new Coordinate(x,y);
                 ambulanceCoordinates.add(roundCoord);
             }
-            Application.ambulanceCoordinates = ambulanceCoordinates;
-            return getTimeGrid(ambulanceCoordinates);
+            timeGrid = getTimeGrid(ambulanceCoordinates);
         }
         catch(Exception ex)
         {
             ex.printStackTrace();
-            return getEmptyGrid(true);
+            timeGrid = getEmptyGrid(true);
         }
+        Application.ambulanceCoordinates = ambulanceCoordinates;
+        return timeGrid;
+
     }
 
     @RequestMapping(value = "/update", method=RequestMethod.POST)

@@ -34,6 +34,6 @@ public class Application {
 
         //GeometryFactory geometryFactory = new GeometryFactory();
         //Point startPoint = geometryFactory.createPoint(new Coordinate(19.916150,50.091422));
-        //OsrmController.downloadRoutesFromPoint(startPoint);
+        //DownloadController.downloadRoutesFromPoint(startPoint);
     }
 }
