@@ -20,7 +20,7 @@ import static osrm.DownloadController.*;
 public class UpdateController
 {
 
-    private static final String modifiedRoadsLocation = "modifiedRoads";
+    private static final String modifiedRoadsLocation = "hdfs://osrm/modifiedRoads"; //"modifiedRoads";
 
     public static List<String> getModifiedRoads() throws IOException
     {
@@ -40,6 +40,10 @@ public class UpdateController
                 modifiedRoads.add(lineString);
                 stream.close();
             }
+        }
+        else
+        {
+            System.out.println("hdfs not recognize path: " + modifiedRoadsLocation);
         }
         return modifiedRoads;
     }

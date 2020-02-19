@@ -30,8 +30,7 @@ public class DownloadController
     private static final String routeServiceOSRM = "/route/v1/driving/";
     static final String scriptUpdateOSRM = "./updateOSRM.sh";
     private static final String schemeOSRM = "http";
-    private static final String hostOSRM = "127.0.0.1"; //"router.project-osrm.org"
-    private static final int portOSRM = 5000;
+    private static final String hostOSRM = "osrm-4027.cloud.plgrid.pl"; //"router.project-osrm.org"
     private static final String scriptStartOSRM = "./startOSRM.sh";
 
     static Geometry downloadOneRoute(Coordinate start, Coordinate end) throws Exception
@@ -67,7 +66,6 @@ public class DownloadController
         URIBuilder builder = new URIBuilder();
         builder.setScheme(schemeOSRM);
         builder.setHost(hostOSRM);
-        builder.setPort(portOSRM);
         builder.setPath(path);
         parameters.forEach(builder::addParameter);
         URL url = builder.build().toURL();
