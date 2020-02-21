@@ -23,9 +23,9 @@ import static map.RouteController.getStartCoord;
 public class GridController
 {
 
-    private static final String irregularGridFile = "/home/weronika/magisterka/DynamicMap/irregularGrid.csv";
-    private static final String regularGridFile = "/home/weronika/magisterka/DynamicMap/grid.csv";
-    private static final String boundaryKrakowLocation = "/home/weronika/magisterka/granicaKrakowa";
+    private static final String irregularGridFile = "irregularGrid.csv";
+    private static final String regularGridFile = "grid.csv";
+    private static final String boundaryKrakowLocation = "granicaKrakowa";
 
     public static void createGrid()
     {
@@ -33,7 +33,7 @@ public class GridController
         //TODO:spytac jak obliczyc 250m?
 
         try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter("grid.csv"));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(regularGridFile));
             GeometryFactory geometryFactory = new GeometryFactory();
             List<Point> pointList = new ArrayList<>();
 
