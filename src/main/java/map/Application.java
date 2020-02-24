@@ -1,6 +1,7 @@
 package map;
 
 import com.vividsolutions.jts.geom.Coordinate;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.serializer.KryoSerializer;
@@ -8,6 +9,7 @@ import org.datasyslab.geospark.serde.GeoSparkKryoRegistrator;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,8 +18,9 @@ public class Application {
 
     public static JavaSparkContext sc;
     public static List<Coordinate> ambulanceCoordinates;
+    public static FileSystem hdfs;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 
         SpringApplication.run(Application.class, args);
 
@@ -29,6 +32,7 @@ public class Application {
 
         sc = new JavaSparkContext(conf);
         ambulanceCoordinates = new ArrayList<>();
+        hdfs = FileSystem.get(sc.hadoopConfiguration());
 
         //createGrid();
 

@@ -2,6 +2,7 @@ package osrm;
 
 import com.vividsolutions.jts.geom.*;
 import map.Application;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.spark.api.java.JavaRDD;
 import org.json.JSONArray;
@@ -12,6 +13,7 @@ import java.io.BufferedReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URISyntaxException;
 import java.util.*;
 
 import static map.RouteController.*;
@@ -19,26 +21,28 @@ import static osrm.DownloadController.*;
 
 public class UpdateController
 {
-
-    private static final String modifiedRoadsLocation = "hdfs://osrm/modifiedRoads"; //"modifiedRoads";
+    private static final String modifiedRoadsLocation = "modifiedRoads";
 
     public static List<String> getModifiedRoads() throws IOException
     {
         List<String> modifiedRoads = new ArrayList<>();
-        FileSystem hdfs = FileSystem.get(Application.sc.hadoopConfiguration());
+        FileSystem hdfs = Application.hdfs;
         Path path = new Path(modifiedRoadsLocation);
         if(hdfs.exists(path))
         {
             FileStatus[] fileStatus = hdfs.listStatus(path);
-            for(FileStatus file: fileStatus)
+            if(fileStatus.length != 0)
             {
-                FSDataInputStream stream = hdfs.open(file.getPath());
-                String firstLine = new BufferedReader(new InputStreamReader(stream)).readLine();
-                String lineString = firstLine.substring
-                        (firstLine.indexOf("LINESTRING"),
-                        firstLine.length());
-                modifiedRoads.add(lineString);
-                stream.close();
+                for (FileStatus file : fileStatus)
+                {
+                    FSDataInputStream stream = hdfs.open(file.getPath());
+                    String firstLine = new BufferedReader(new InputStreamReader(stream)).readLine();
+                    String lineString = firstLine.substring
+                            (firstLine.indexOf("LINESTRING"),
+                                    firstLine.length());
+                    modifiedRoads.add(lineString);
+                    stream.close();
+                }
             }
         }
         else
