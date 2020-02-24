@@ -1,6 +1,9 @@
 package map;
 
 import com.vividsolutions.jts.geom.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.datasyslab.geospark.enums.FileDataSplitter;
@@ -13,6 +16,7 @@ import scala.Tuple2;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -68,15 +72,32 @@ public class GridController
 
     public static List<Point> getGrid(boolean fitToRoadNetwork)
     {
+        List<Point> points = new ArrayList<>();
         String pointRDDInputLocation = irregularGridFile;
         if(!fitToRoadNetwork)
         {
             pointRDDInputLocation = regularGridFile;
         }
-        int pointRDDOffset = 0;
-        FileDataSplitter pointRDDSplitter = FileDataSplitter.CSV;
-        PointRDD pointsRDD = new PointRDD(Application.sc, pointRDDInputLocation, pointRDDOffset, pointRDDSplitter, false);
-        return pointsRDD.rawSpatialRDD.collect();
+        FileSystem hdfs = Application.hdfs;
+        Path path = new Path(pointRDDInputLocation);
+        try
+        {
+            if(!hdfs.exists(path))
+            {
+                Configuration conf = new Configuration();
+                FileSystem localFS = FileSystem.getLocal(conf);
+                hdfs.copyFromLocalFile(localFS.getWorkingDirectory(), path);
+            }
+            int pointRDDOffset = 0;
+            FileDataSplitter pointRDDSplitter = FileDataSplitter.CSV;
+            PointRDD pointsRDD = new PointRDD(Application.sc, pointRDDInputLocation, pointRDDOffset, pointRDDSplitter, false);
+            points = pointsRDD.rawSpatialRDD.collect();
+        }
+        catch(IOException ex)
+        {
+            ex.printStackTrace();
+        }
+        return points;
     }
 
     static Map<Point, Double> getEmptyGrid(boolean fitToRoadNetwork)

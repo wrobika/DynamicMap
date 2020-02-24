@@ -58,7 +58,7 @@ public class MapController {
             List<String> modifiedRoads = getModifiedRoads();
             model.addAttribute("roads", modifiedRoads);
         }
-        catch(IOException ex)
+        catch(Exception ex)
         {
             ex.printStackTrace();
         }
