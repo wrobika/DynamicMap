@@ -31,18 +31,15 @@ public class UpdateController
         if(hdfs.exists(path))
         {
             FileStatus[] fileStatus = hdfs.listStatus(path);
-            if(fileStatus.length != 0)
+            for (FileStatus file : fileStatus)
             {
-                for (FileStatus file : fileStatus)
-                {
-                    FSDataInputStream stream = hdfs.open(file.getPath());
-                    String firstLine = new BufferedReader(new InputStreamReader(stream)).readLine();
-                    String lineString = firstLine.substring
-                            (firstLine.indexOf("LINESTRING"),
-                                    firstLine.length());
-                    modifiedRoads.add(lineString);
-                    stream.close();
-                }
+                FSDataInputStream stream = hdfs.open(file.getPath());
+                String firstLine = new BufferedReader(new InputStreamReader(stream)).readLine();
+                String lineString = firstLine.substring
+                        (firstLine.indexOf("LINESTRING"),
+                                firstLine.length());
+                modifiedRoads.add(lineString);
+                stream.close();
             }
         }
         else

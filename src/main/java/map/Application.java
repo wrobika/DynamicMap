@@ -25,7 +25,7 @@ public class Application {
         SpringApplication.run(Application.class, args);
 
         SparkConf conf = new SparkConf().setAppName("DynamicMap")
-            .setMaster("local[*]")
+            .setMaster("spark://master:7077")
             .set("spark.serializer", KryoSerializer.class.getName())
             .set("spark.kryo.registrator", GeoSparkKryoRegistrator.class.getName())
             .set("spark.hadoop.validateOutputSpecs", "false");
