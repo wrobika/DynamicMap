@@ -22,7 +22,8 @@ import java.util.stream.Collectors;
 
 import static java.lang.Math.cos;
 import static map.RouteController.getAllRoutesRDD;
-import static map.RouteController.getStartCoord;
+import static map.RouteController.getEndPoint;
+import static map.RouteController.getStartPoint;
 
 public class GridController
 {
@@ -78,10 +79,10 @@ public class GridController
         {
             pointRDDInputLocation = regularGridFile;
         }
-        FileSystem hdfs = Application.hdfs;
-        Path path = new Path(pointRDDInputLocation);
         try
         {
+            FileSystem hdfs = Application.hdfs;
+            Path path = new Path(pointRDDInputLocation);
             if(!hdfs.exists(path))
             {
                 Configuration conf = new Configuration();
@@ -111,51 +112,54 @@ public class GridController
         return emptyGrid;
     }
 
-    static Map<Point, Double> getTimeGrid(List<Coordinate> ambulanceCoordinates) throws Exception
+    static Map<Point, Double> getTimeGrid() throws Exception
     {
-        if(ambulanceCoordinates.isEmpty())
+        List<Point> ambulances = Application.ambulances;
+        if(ambulances.isEmpty())
         {
             return getEmptyGrid(true);
         }
         SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
 
-        JavaRDD<Geometry> routesFromAmbulancePointsRDD = allRoutesRDD.rawSpatialRDD
-                .filter(route -> ambulanceCoordinates.contains(getStartCoord(route)));
+        JavaRDD<Geometry> routesFromAmbulancesLocationRDD = allRoutesRDD.rawSpatialRDD
+                .filter(route -> ambulances.contains(getStartPoint(route)));
 
-        long foundAmbulanceCoordCount = routesFromAmbulancePointsRDD
-                .map(RouteController::getStartCoord)
+        long foundAmbulanceCoordCount = routesFromAmbulancesLocationRDD
+                .map(RouteController::getStartPoint)
                 .distinct().count();
-        if(foundAmbulanceCoordCount < ambulanceCoordinates.size())
+        if(foundAmbulanceCoordCount < ambulances.size())
         {
-            routesFromAmbulancePointsRDD = downloadMissingData(ambulanceCoordinates, routesFromAmbulancePointsRDD);
+            routesFromAmbulancesLocationRDD = downloadMissingData(ambulances, routesFromAmbulancesLocationRDD);
         }
-        JavaPairRDD<Point, Double> timeGrid = routesFromAmbulancePointsRDD
+
+        JavaPairRDD<Point, Double> timeGrid = routesFromAmbulancesLocationRDD
                 .mapToPair(GridController::getPointTime)
                 .reduceByKey((time1,time2) -> (time2 < time1) ? time2 : time1);
         return timeGrid.collectAsMap();
     }
 
-    private static JavaRDD<Geometry> downloadMissingData(List<Coordinate> ambulanceCoordinates,
-                                                         JavaRDD<Geometry> routesFromAmbulancePointsRDD) throws Exception
+    private static JavaRDD<Geometry> downloadMissingData(List<Point> ambulances,
+                                                         JavaRDD<Geometry> routesFromAmbulancesLocationRDD) throws Exception
     {
-        List<Coordinate> foundAmbulanceCoordinates = routesFromAmbulancePointsRDD
-                .map(RouteController::getStartCoord)
+        List<Point> foundAmbulances = routesFromAmbulancesLocationRDD
+                .map(RouteController::getStartPoint)
                 .distinct()
                 .collect();
-        List<Coordinate> coordinatesToDownload = new ArrayList<>(ambulanceCoordinates);
-        coordinatesToDownload.removeAll(foundAmbulanceCoordinates);
-        DownloadController.downloadRoutes(coordinatesToDownload);
+
+        List<Point> pointsToDownload = new ArrayList<>(ambulances);
+        pointsToDownload.removeAll(foundAmbulances);
+        DownloadController.downloadRoutes(pointsToDownload);
 
         SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
         //lub nie filtrowac allRoutes na nowo, tylko dolaczyc pobrane do routesFromAmbulancePointsRDD
-        routesFromAmbulancePointsRDD = allRoutesRDD.rawSpatialRDD
-                .filter(route -> ambulanceCoordinates.contains(getStartCoord(route)));
-        return routesFromAmbulancePointsRDD;
+        routesFromAmbulancesLocationRDD = allRoutesRDD.rawSpatialRDD
+                .filter(route -> ambulances.contains(getStartPoint(route)));
+        return routesFromAmbulancesLocationRDD;
     }
 
     private static Tuple2<Point, Double> getPointTime(Geometry route)
     {
-        Point point = ((LineString) route).getEndPoint();
+        Point point = getEndPoint(route);
         Double time = Double.valueOf(route.getUserData().toString());
         return new Tuple2<>(point, time);
     }

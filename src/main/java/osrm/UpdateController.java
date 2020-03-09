@@ -60,7 +60,7 @@ public class UpdateController
             restartOSRM();
             JavaRDD<Geometry> intersectedRoutesRDD = findIntersectedRoutes(road);
             JavaRDD<Geometry> newRoutesRDD = intersectedRoutesRDD.map(route ->
-                downloadOneRoute(getStartCoord(route), getEndCoord(route))
+                downloadOneRoute(getStartPoint(route), getEndPoint(route))
             );
             replaceRoutes(intersectedRoutesRDD, newRoutesRDD);
         }

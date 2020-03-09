@@ -33,27 +33,24 @@ public class DownloadController
     private static final String hostOSRM = "osrm-4027.cloud.plgrid.pl"; //"router.project-osrm.org"
     private static final String scriptStartOSRM = "./startOSRM.sh";
 
-    static Geometry downloadOneRoute(Coordinate start, Coordinate end) throws Exception
+    static Geometry downloadOneRoute(Point start, Point end) throws Exception
     {
-        List<Coordinate> startEndPoints = Arrays.asList(start, end);
+        List<Point> startEndPoints = Arrays.asList(start, end);
         String response = getRouteResponse(startEndPoints);
         return createLineStringRoute(response);
     }
 
     //TODO: sprawdzic czy pobral cala siatke
-    public static void downloadRoutes(List<Coordinate> startCoords) throws Exception
+    public static void downloadRoutes(List<Point> startPoints) throws Exception
     {
         List<Point> gridPoints = getGrid(false);
-        List<Coordinate> gridCoordinates = gridPoints.stream()
-                .map(Point::getCoordinate)
-                .collect(Collectors.toList());
         List<Geometry> newRoutes = new ArrayList<>();
-        for (Coordinate start: startCoords)
+        for (Point start: startPoints)
         {
-            for(Coordinate coordFromGrid : gridCoordinates)
+            for(Point pointFromGrid : gridPoints)
             {
-                List<Coordinate> startEndCoord = Arrays.asList(start, coordFromGrid);
-                String response = getRouteResponse(startEndCoord);
+                List<Point> startEndPoints = Arrays.asList(start, pointFromGrid);
+                String response = getRouteResponse(startEndPoints);
                 LineString route = createLineStringRoute(response);
                 newRoutes.add(route);
             }
@@ -103,11 +100,11 @@ public class DownloadController
         return false;
     }
 
-    private static String getRouteResponse(List<Coordinate> coordinates) throws Exception
+    private static String getRouteResponse(List<Point> points) throws Exception
     {
-        if(coordinates.size() < 2)
+        if(points.size() < 2)
             throw new Exception("too few points to set route");
-        String pointsString = coordinatesToString(coordinates);
+        String pointsString = pointsToString(points);
         String path = routeServiceOSRM + pointsString;
         Map<String, String> parameters = new HashMap<>();
         parameters.put("geometries","geojson");
@@ -139,6 +136,19 @@ public class DownloadController
             result.append(coordinate.x);
             result.append(",");
             result.append(coordinate.y);
+            result.append(";");
+        }
+        result.deleteCharAt(result.length()-1);
+        return result.toString();
+    }
+
+    private static String pointsToString(List<Point> points)
+    {
+        StringBuilder result = new StringBuilder();
+        for (Point point : points) {
+            result.append(point.getX());
+            result.append(",");
+            result.append(point.getY());
             result.append(";");
         }
         result.deleteCharAt(result.length()-1);

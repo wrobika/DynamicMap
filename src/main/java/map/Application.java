@@ -1,6 +1,6 @@
 package map;
 
-import com.vividsolutions.jts.geom.Coordinate;
+import com.vividsolutions.jts.geom.Point;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
@@ -17,7 +17,7 @@ import java.util.List;
 public class Application {
 
     public static JavaSparkContext sc;
-    public static List<Coordinate> ambulanceCoordinates;
+    public static List<Point> ambulances;
     public static FileSystem hdfs;
 
     public static void main(String[] args) throws IOException {
@@ -31,13 +31,9 @@ public class Application {
             .set("spark.hadoop.validateOutputSpecs", "false");
 
         sc = new JavaSparkContext(conf);
-        ambulanceCoordinates = new ArrayList<>();
+        ambulances = new ArrayList<>();
         hdfs = FileSystem.get(sc.hadoopConfiguration());
 
         //createGrid();
-
-        //GeometryFactory geometryFactory = new GeometryFactory();
-        //Point startPoint = geometryFactory.createPoint(new Coordinate(19.916150,50.091422));
-        //DownloadController.downloadRoutesFromPoint(startPoint);
     }
 }

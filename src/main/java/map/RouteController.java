@@ -1,8 +1,8 @@
 package map;
 
-import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.LineString;
+import com.vividsolutions.jts.geom.Point;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.api.java.JavaRDD;
@@ -55,13 +55,23 @@ public class RouteController
         unionRDD.saveAsTextFile(allRoutesLocation);
     }
 
-    public static Coordinate getStartCoord(Geometry route)
+    public static Point getStartPoint(Geometry route)
     {
-        return ((LineString)route).getStartPoint().getCoordinate();
+        if(route instanceof LineString)
+        {
+            return ((LineString) route).getStartPoint();
+        }
+        //TODO: bardzo brzydki null
+        return null;
     }
 
-    public static Coordinate getEndCoord(Geometry route)
+    public static Point getEndPoint(Geometry route)
     {
-        return ((LineString)route).getEndPoint().getCoordinate();
+        if(route instanceof LineString)
+        {
+            return ((LineString) route).getEndPoint();
+        }
+        //TODO: bardzo brzydki null
+        return null;
     }
 }
