@@ -15,7 +15,7 @@ import java.util.List;
 
 public class RouteController
 {
-    private static final String allRoutesLocation = "allRoutes";
+    private static final String allRoutesLocation = "/dynamicmap/allRoutes";
 
     static SpatialRDD<Geometry> getAllRoutesRDD() throws IOException
     {

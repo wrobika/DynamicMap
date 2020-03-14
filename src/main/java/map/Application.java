@@ -29,9 +29,9 @@ public class Application {
             .set("spark.serializer", KryoSerializer.class.getName())
             .set("spark.kryo.registrator", GeoSparkKryoRegistrator.class.getName())
             .set("spark.hadoop.validateOutputSpecs", "false");
-
-        sc = new JavaSparkContext(conf);
-        ambulances = new ArrayList<>();
+        
+	sc = new JavaSparkContext(conf);
+	ambulances = new ArrayList<>();
         hdfs = FileSystem.get(sc.hadoopConfiguration());
 
         //createGrid();

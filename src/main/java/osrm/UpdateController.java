@@ -21,7 +21,7 @@ import static osrm.DownloadController.*;
 
 public class UpdateController
 {
-    private static final String modifiedRoadsLocation = "modifiedRoads";
+    private static final String modifiedRoadsLocation = "/dynamicmap/modifiedRoads";
 
     public static List<String> getModifiedRoads() throws IOException
     {
