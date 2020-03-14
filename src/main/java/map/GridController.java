@@ -28,9 +28,9 @@ import static map.RouteController.getStartPoint;
 public class GridController
 {
 
-    private static final String irregularGridFile = "irregularGrid.csv";
-    private static final String regularGridFile = "grid.csv";
-    private static final String boundaryKrakowLocation = "granicaKrakowa";
+    private static final String irregularGridFile = "/dynamicmap/irregularGrid.csv";
+    private static final String regularGridFile = "/dynamicmap/grid.csv";
+    private static final String boundaryKrakowLocation = "/dynamicmap/granicaKrakowa";
 
     public static void createGrid()
     {
@@ -87,7 +87,9 @@ public class GridController
             {
                 Configuration conf = new Configuration();
                 FileSystem localFS = FileSystem.getLocal(conf);
-                hdfs.copyFromLocalFile(localFS.getWorkingDirectory(), path);
+                  Path localPath = new Path(localFS.getHomeDirectory().toString() +
+                        pointRDDInputLocation);
+                hdfs.copyFromLocalFile(localPath, path);
             }
             int pointRDDOffset = 0;
             FileDataSplitter pointRDDSplitter = FileDataSplitter.CSV;
