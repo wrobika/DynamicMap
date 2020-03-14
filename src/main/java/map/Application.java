@@ -1,13 +1,16 @@
 package map;
 
 import com.vividsolutions.jts.geom.Point;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.serializer.KryoSerializer;
 import org.datasyslab.geospark.serde.GeoSparkKryoRegistrator;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import osrm.DownloadController;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,10 +33,41 @@ public class Application {
             .set("spark.kryo.registrator", GeoSparkKryoRegistrator.class.getName())
             .set("spark.hadoop.validateOutputSpecs", "false");
         
-	sc = new JavaSparkContext(conf);
-	ambulances = new ArrayList<>();
+	    sc = new JavaSparkContext(conf);
+	    ambulances = new ArrayList<>();
         hdfs = FileSystem.get(sc.hadoopConfiguration());
 
+        copyRequiredFiles();
         //createGrid();
+    }
+
+    private static void copyRequiredFiles()
+    {
+        String[] fileNames = new String[] {
+            GridController.regularGridFile,
+            GridController.irregularGridFile,
+            GridController.boundaryKrakowLocation,
+            DownloadController.scriptStartOSRM,
+            DownloadController.scriptUpdateOSRM
+        };
+        try
+        {
+            for(String file : fileNames)
+            {
+                FileSystem hdfs = Application.hdfs;
+                Path path = new Path(file);
+                if(!hdfs.exists(path))
+                {
+                    Configuration conf = new Configuration();
+                    FileSystem localFS = FileSystem.getLocal(conf);
+                    Path localPath = new Path(localFS.getHomeDirectory().toString() + file);
+                    hdfs.copyFromLocalFile(localPath, path);
+                }
+            }
+        }
+        catch(IOException ex)
+        {
+            ex.printStackTrace();
+        }
     }
 }
