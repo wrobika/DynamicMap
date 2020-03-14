@@ -25,13 +25,13 @@ import static map.RouteController.addNewRoutes;
 @Controller
 public class DownloadController
 {
+    public static final String scriptStartOSRM = "./startOSRM.sh";
+    public static final String scriptUpdateOSRM = "./updateOSRM.sh";
     static final String tripServiceOSRM = "/trip/v1/driving/";
     static final String nearestServiceOSRM = "/nearest/v1/driving/";
     private static final String routeServiceOSRM = "/route/v1/driving/";
-    static final String scriptUpdateOSRM = "./updateOSRM.sh";
     private static final String schemeOSRM = "http";
     private static final String hostOSRM = "osrm-4027.cloud.plgrid.pl"; //"router.project-osrm.org"
-    private static final String scriptStartOSRM = "./startOSRM.sh";
 
     static Geometry downloadOneRoute(Point start, Point end) throws Exception
     {

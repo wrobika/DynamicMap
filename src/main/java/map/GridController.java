@@ -28,9 +28,9 @@ import static map.RouteController.getStartPoint;
 public class GridController
 {
 
-    private static final String irregularGridFile = "/dynamicmap/irregularGrid.csv";
-    private static final String regularGridFile = "/dynamicmap/grid.csv";
-    private static final String boundaryKrakowLocation = "/dynamicmap/granicaKrakowa";
+    static final String irregularGridFile = "/dynamicmap/irregularGrid.csv";
+    static final String regularGridFile = "/dynamicmap/grid.csv";
+    static final String boundaryKrakowLocation = "/dynamicmap/granicaKrakowa";
 
     public static void createGrid()
     {
@@ -73,34 +73,15 @@ public class GridController
 
     public static List<Point> getGrid(boolean fitToRoadNetwork)
     {
-        List<Point> points = new ArrayList<>();
         String pointRDDInputLocation = irregularGridFile;
         if(!fitToRoadNetwork)
         {
             pointRDDInputLocation = regularGridFile;
         }
-        try
-        {
-            FileSystem hdfs = Application.hdfs;
-            Path path = new Path(pointRDDInputLocation);
-            if(!hdfs.exists(path))
-            {
-                Configuration conf = new Configuration();
-                FileSystem localFS = FileSystem.getLocal(conf);
-                  Path localPath = new Path(localFS.getHomeDirectory().toString() +
-                        pointRDDInputLocation);
-                hdfs.copyFromLocalFile(localPath, path);
-            }
-            int pointRDDOffset = 0;
-            FileDataSplitter pointRDDSplitter = FileDataSplitter.CSV;
-            PointRDD pointsRDD = new PointRDD(Application.sc, pointRDDInputLocation, pointRDDOffset, pointRDDSplitter, false);
-            points = pointsRDD.rawSpatialRDD.collect();
-        }
-        catch(IOException ex)
-        {
-            ex.printStackTrace();
-        }
-        return points;
+        int pointRDDOffset = 0;
+        FileDataSplitter pointRDDSplitter = FileDataSplitter.CSV;
+        PointRDD pointsRDD = new PointRDD(Application.sc, pointRDDInputLocation, pointRDDOffset, pointRDDSplitter, false);
+        return pointsRDD.rawSpatialRDD.collect();
     }
 
     static Map<Point, Double> getEmptyGrid(boolean fitToRoadNetwork)
