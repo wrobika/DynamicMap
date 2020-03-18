@@ -25,8 +25,8 @@ import static map.RouteController.addNewRoutes;
 @Controller
 public class DownloadController
 {
-    public static final String scriptStartOSRM = "./startOSRM.sh";
-    public static final String scriptUpdateOSRM = "./updateOSRM.sh";
+    public static final String scriptStartOSRM = "/dynamicmap/startOSRM.sh";
+    public static final String scriptUpdateOSRM = "/dynamicmap/updateOSRM.sh";
     static final String tripServiceOSRM = "/trip/v1/driving/";
     static final String nearestServiceOSRM = "/nearest/v1/driving/";
     private static final String routeServiceOSRM = "/route/v1/driving/";
