@@ -14,10 +14,10 @@ import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 
 import java.io.*;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.*;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import static map.GridController.getGrid;
 import static map.RouteController.addNewRoutes;
@@ -25,13 +25,14 @@ import static map.RouteController.addNewRoutes;
 @Controller
 public class DownloadController
 {
-    public static final String scriptStartOSRM = "/dynamicmap/startOSRM.sh";
-    public static final String scriptUpdateOSRM = "/dynamicmap/updateOSRM.sh";
     static final String tripServiceOSRM = "/trip/v1/driving/";
     static final String nearestServiceOSRM = "/nearest/v1/driving/";
+    static final String updateOSRM = "/update";
+    static final String startOSRM = "/start";
     private static final String routeServiceOSRM = "/route/v1/driving/";
     private static final String schemeOSRM = "http";
     private static final String hostOSRM = "osrm-4027.cloud.plgrid.pl"; //"router.project-osrm.org"
+    private static final String hostManageOSRM = "osrm-manage-4027.cloud.plgrid.pl";
 
     static Geometry downloadOneRoute(Point start, Point end) throws Exception
     {
@@ -75,29 +76,23 @@ public class DownloadController
         }
         catch (HttpHostConnectException ex)
         {
-            Runtime.getRuntime().exec(scriptStartOSRM);
-            if(!isReachableOSRM(url))
-                throw ex;
+            manageOSRM(startOSRM);
         }
         HttpResponse response = client.execute(new HttpGet(url.toString()));
         HttpEntity entityResponse = response.getEntity();
         return EntityUtils.toString(entityResponse, "UTF-8");
     }
 
-    private static boolean isReachableOSRM(URL url) throws InterruptedException, IOException
+    static void manageOSRM(String action) throws URISyntaxException, IOException
     {
+        URIBuilder builder = new URIBuilder();
+        builder.setScheme(schemeOSRM);
+        builder.setHost(hostManageOSRM);
+        builder.setPath(action);
+        URL url = builder.build().toURL();
         HttpClient client = HttpClientBuilder.create().build();
-        int pingCount=0;
-        while(pingCount<10) {
-            try {
-                client.execute(new HttpGet(url.toString()));
-                return true;
-            } catch (HttpHostConnectException ex) {
-                Thread.sleep(1000);
-                pingCount++;
-            }
-        }
-        return false;
+        HttpResponse response = client.execute(new HttpGet(url.toString()));
+        response.getStatusLine().getStatusCode();
     }
 
     private static String getRouteResponse(List<Point> points) throws Exception

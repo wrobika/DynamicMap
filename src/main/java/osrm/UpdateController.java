@@ -52,7 +52,8 @@ public class UpdateController
         {
             LineString road = roadAndNodes._1;
             writeUpdateFile(road, nodes);
-            restartOSRM();
+            manageOSRM(updateOSRM);
+            manageOSRM(startOSRM);
             JavaRDD<Geometry> intersectedRoutesRDD = findIntersectedRoutes(road);
             JavaRDD<Geometry> newRoutesRDD = intersectedRoutesRDD.map(route ->
                 downloadOneRoute(getStartPoint(route), getEndPoint(route))
@@ -190,40 +191,5 @@ public class UpdateController
         }
         writer.flush();
         writer.close();
-	
-	/*	        List<String> updateInfo = new ArrayList<>();
-        StringBuilder line = new StringBuilder();
-        for (int i = 0; i<nodes.size()-1; i++) {
-            line.append(nodes.get(i).toString());
-            line.append(',');
-            line.append(nodes.get(i+1).toString());
-            line.append(",0,,");
-            if(i==0) line.append(road.toString());
-            line.append("\n");
-            updateInfo.add(line.toString());
-        }
-        JavaRDD<String> upadteInfoRDD = Application.sc.parallelize(updateInfo);
-        upadteInfoRDD.saveAsTextFile(updateFilePath);
-        
-/*	FileWriter csvWriter = new FileWriter(updateFile);
-        for (int i = 0; i<nodes.size()-1; i++) {
-            csvWriter.append(nodes.get(i).toString());
-            csvWriter.append(',');
-            csvWriter.append(nodes.get(i+1).toString());
-            csvWriter.append(",0,,");
-            if(i==0) csvWriter.append(road.toString());
-            csvWriter.append("\n");
-        }
-        csvWriter.flush();
-        csvWriter.close(); */
-    }
-
-    private static void restartOSRM() throws IOException, InterruptedException
-    {
-        Process process = Runtime.getRuntime().exec(scriptUpdateOSRM);
-        if (process.waitFor() != 0)
-        {
-            System.out.println(process.exitValue() + ": error while update road speed");
-        }
     }
 }

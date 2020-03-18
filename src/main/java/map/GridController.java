@@ -1,9 +1,6 @@
 package map;
 
 import com.vividsolutions.jts.geom.*;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.datasyslab.geospark.enums.FileDataSplitter;
@@ -16,7 +13,6 @@ import scala.Tuple2;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 

@@ -4,14 +4,12 @@ import com.vividsolutions.jts.geom.Point;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.serializer.KryoSerializer;
 import org.datasyslab.geospark.serde.GeoSparkKryoRegistrator;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import osrm.DownloadController;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,8 +46,6 @@ public class Application {
             GridController.regularGridFile,
             GridController.irregularGridFile,
             GridController.boundaryKrakowLocation,
-            DownloadController.scriptStartOSRM,
-            DownloadController.scriptUpdateOSRM
         };
         try
         {
@@ -63,10 +59,6 @@ public class Application {
                     FileSystem localFS = FileSystem.getLocal(conf);
                     Path localPath = new Path(localFS.getHomeDirectory().toString() + file);
                     hdfs.copyFromLocalFile(localPath, path);
-                }
-		if(file.endsWith(".sh"))
-                {
-                    hdfs.setPermission(path, new FsPermission("744"));
                 }
             }
         }
