@@ -2,18 +2,13 @@ package osrm;
 
 import com.vividsolutions.jts.geom.*;
 import map.Application;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.spark.api.java.JavaRDD;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import scala.Tuple2;
 
-import java.io.BufferedReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URISyntaxException;
+import java.io.*;
 import java.util.*;
 
 import static map.RouteController.*;
@@ -182,7 +177,35 @@ public class UpdateController
             hdfs.mkdirs(path);
         String updateFile = modifiedRoadsLocation + "/" +
                 "LINESTRING" + String.valueOf(road.hashCode()) + ".csv";
-        FileWriter csvWriter = new FileWriter(updateFile);
+        Path updateFilePath = new Path(updateFile);
+        FSDataOutputStream outputStream = hdfs.create(updateFilePath);
+        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream));
+        for (int i = 0; i<nodes.size()-1; i++) {
+            writer.append(nodes.get(i).toString());
+            writer.append(',');
+            writer.append(nodes.get(i+1).toString());
+            writer.append(",0,,");
+            if(i==0) writer.append(road.toString());
+            writer.append("\n");
+        }
+        writer.flush();
+        writer.close();
+	
+	/*	        List<String> updateInfo = new ArrayList<>();
+        StringBuilder line = new StringBuilder();
+        for (int i = 0; i<nodes.size()-1; i++) {
+            line.append(nodes.get(i).toString());
+            line.append(',');
+            line.append(nodes.get(i+1).toString());
+            line.append(",0,,");
+            if(i==0) line.append(road.toString());
+            line.append("\n");
+            updateInfo.add(line.toString());
+        }
+        JavaRDD<String> upadteInfoRDD = Application.sc.parallelize(updateInfo);
+        upadteInfoRDD.saveAsTextFile(updateFilePath);
+        
+/*	FileWriter csvWriter = new FileWriter(updateFile);
         for (int i = 0; i<nodes.size()-1; i++) {
             csvWriter.append(nodes.get(i).toString());
             csvWriter.append(',');
@@ -192,7 +215,7 @@ public class UpdateController
             csvWriter.append("\n");
         }
         csvWriter.flush();
-        csvWriter.close();
+        csvWriter.close(); */
     }
 
     private static void restartOSRM() throws IOException, InterruptedException
