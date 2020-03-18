@@ -37,10 +37,6 @@ public class UpdateController
                 stream.close();
             }
         }
-        else
-        {
-            System.out.println("hdfs not recognize path: " + modifiedRoadsLocation);
-        }
         return modifiedRoads;
     }
 

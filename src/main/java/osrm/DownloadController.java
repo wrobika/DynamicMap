@@ -14,6 +14,7 @@ import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 
 import java.io.*;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.*;
@@ -61,38 +62,56 @@ public class DownloadController
 
     static String getHttpResponse(String path, Map<String, String> parameters) throws Exception
     {
-        URIBuilder builder = new URIBuilder();
-        builder.setScheme(schemeOSRM);
-        builder.setHost(hostOSRM);
-        builder.setPath(path);
-        parameters.forEach(builder::addParameter);
-        URL url = builder.build().toURL();
+        URL url = getURL(hostOSRM, path, parameters);
         HttpClient client = HttpClientBuilder.create().build();
-        try
-        {
-            HttpResponse response = client.execute(new HttpGet(url.toString()));
-            HttpEntity entityResponse = response.getEntity();
-            return EntityUtils.toString(entityResponse, "UTF-8");
-        }
-        catch (HttpHostConnectException ex)
-        {
-            manageOSRM(startOSRM);
-        }
         HttpResponse response = client.execute(new HttpGet(url.toString()));
         HttpEntity entityResponse = response.getEntity();
-        return EntityUtils.toString(entityResponse, "UTF-8");
+        String responseString = EntityUtils.toString(entityResponse, "UTF-8");
+        if(responseString.contains("502 Bad Gateway"))
+        {
+            manageOSRM(startOSRM);
+            response = client.execute(new HttpGet(url.toString()));
+            entityResponse = response.getEntity();
+            responseString = EntityUtils.toString(entityResponse, "UTF-8");
+        }
+        return responseString;
     }
 
-    static void manageOSRM(String action) throws URISyntaxException, IOException
+    static void manageOSRM(String action) throws Exception
     {
-        URIBuilder builder = new URIBuilder();
-        builder.setScheme(schemeOSRM);
-        builder.setHost(hostManageOSRM);
-        builder.setPath(action);
-        URL url = builder.build().toURL();
+        URL url = getURL(hostManageOSRM, action, new HashMap<>());
         HttpClient client = HttpClientBuilder.create().build();
         HttpResponse response = client.execute(new HttpGet(url.toString()));
         response.getStatusLine().getStatusCode();
+        if(action.equals(startOSRM))
+            pingOSRM();
+    }
+
+    private static void pingOSRM() throws Exception
+    {
+        URL url = getURL(hostOSRM, routeServiceOSRM, new HashMap<>());
+        HttpClient client = HttpClientBuilder.create().build();
+        int pingCount=0;
+        while(pingCount<10)
+        {
+            HttpResponse response = client.execute(new HttpGet(url.toString()));
+            HttpEntity entityResponse = response.getEntity();
+            String responseString = EntityUtils.toString(entityResponse, "UTF-8");
+            if(!responseString.contains("502 Bad Gateway"))
+                return;
+            Thread.sleep(1000);
+            pingCount++;
+        }
+    }
+
+    private static URL getURL(String host, String path, Map<String, String> parameters) throws URISyntaxException, MalformedURLException
+    {
+        URIBuilder builder = new URIBuilder();
+        builder.setScheme(schemeOSRM);
+        builder.setHost(host);
+        builder.setPath(path);
+        parameters.forEach(builder::addParameter);
+        return builder.build().toURL();
     }
 
     private static String getRouteResponse(List<Point> points) throws Exception
