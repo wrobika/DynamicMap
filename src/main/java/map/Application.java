@@ -15,6 +15,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static osrm.DownloadController.manageOSRM;
+import static osrm.DownloadController.startOSRM;
+
 @SpringBootApplication
 public class Application {
 
@@ -22,8 +25,8 @@ public class Application {
     public static List<Point> ambulances;
     public static FileSystem hdfs;
 
-    public static void main(String[] args) throws IOException {
-
+    public static void main(String[] args) throws Exception
+    {
         SpringApplication.run(Application.class, args);
 
         SparkConf conf = new SparkConf().setAppName("DynamicMap")
@@ -32,11 +35,12 @@ public class Application {
             .set("spark.kryo.registrator", GeoSparkKryoRegistrator.class.getName())
             .set("spark.hadoop.validateOutputSpecs", "false");
         
-	    sc = new JavaSparkContext(conf);
-	    ambulances = new ArrayList<>();
+	sc = new JavaSparkContext(conf);
+	ambulances = new ArrayList<>();
         hdfs = FileSystem.get(sc.hadoopConfiguration());
 
         copyRequiredFiles();
+	manageOSRM(startOSRM);
         //createGrid();
     }
 
