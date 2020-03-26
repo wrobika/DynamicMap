@@ -48,28 +48,40 @@ public class DownloadController
     public static void downloadAllRoutes() throws Exception
     {
         List<Point> gridPoints = getGrid(true);
-        downloadRoutes(gridPoints);
+        List<Point> notDownloaded = downloadRoutes(gridPoints);
+        while(!notDownloaded.isEmpty())
+            notDownloaded = downloadRoutes(notDownloaded);
     }
 
-    //TODO: sprawdzic czy pobral cala siatke
-    public static void downloadRoutes(List<Point> startPoints) throws Exception
+    public static List<Point> downloadRoutes(List<Point> startPoints) throws Exception
     {
         List<Point> gridPoints = getGrid(false);
         List<Geometry> newRoutes = new ArrayList<>();
+        List<Point> notDownloadedPoints = new ArrayList<>();
         long size = startPoints.size();
-        long count = 0;
+        long downloaded = 0;
+        long notDownloaded = 0;
         for (Point start: startPoints)
         {
-            for(Point pointFromGrid : gridPoints)
+            try
             {
-                List<Point> startEndPoints = Arrays.asList(start, pointFromGrid);
-                String response = getRouteResponse(startEndPoints);
-                LineString route = createLineStringRoute(response);
-                newRoutes.add(route);
+                for(Point pointFromGrid : gridPoints)
+                {
+                    List<Point> startEndPoints = Arrays.asList(start, pointFromGrid);
+                    String response = getRouteResponse(startEndPoints);
+                    LineString route = createLineStringRoute(response);
+                    newRoutes.add(route);
+                }
+                addNewRoutes(newRoutes);
+                System.out.println("downloaded " + ++downloaded +"/"+ size);
             }
-            addNewRoutes(newRoutes);
-            System.out.println("downloaded " + count++ +"/"+ size);
+            catch(JSONException ex)
+            {
+                notDownloadedPoints.add(start);
+                System.out.println("! not downloaded " + ++notDownloaded);
+            }
         }
+        return notDownloadedPoints;
     }
 
     static Geometry downloadOneRoute(Point start, Point end) throws Exception
@@ -88,9 +100,8 @@ public class DownloadController
         String responseString = EntityUtils.toString(entityResponse, "UTF-8");
         if(!responseString.startsWith("{")) //to jest do wywalenia
         {
-	        Thread.sleep(1000);
+	        Thread.sleep(5000);
 	        System.out.println(responseString);
-            //manageOSRM(startOSRM);
             response = client.execute(new HttpGet(url.toString()));
             entityResponse = response.getEntity();
             responseString = EntityUtils.toString(entityResponse, "UTF-8");
