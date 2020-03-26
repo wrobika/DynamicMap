@@ -49,11 +49,20 @@ public class UpdateController
             LineString road = roadAndNodes._1;
             writeUpdateFile(road, nodes);
             manageOSRM(updateOSRM);
-            manageOSRM(startOSRM);
             JavaRDD<Geometry> intersectedRoutesRDD = findIntersectedRoutes(road);
             JavaRDD<Geometry> newRoutesRDD = intersectedRoutesRDD.map(route ->
                 downloadOneRoute(getStartPoint(route), getEndPoint(route))
             );
+	    intersectedRoutesRDD.collect()
+                .forEach(route -> {
+                    System.out.println(route.getCoordinates()[route.getCoordinates().length-1]);
+                    System.out.println(route.getUserData().toString());   
+                });
+            newRoutesRDD.collect()
+                .forEach(route -> {
+                    System.out.println(route.getCoordinates()[route.getCoordinates().length-1]);
+                    System.out.println(route.getUserData().toString());
+                });
             replaceRoutes(intersectedRoutesRDD, newRoutesRDD);
         }
     }

@@ -39,9 +39,6 @@
     }
 
     function loadFeatures(mapPointTime) {
-        Object.keys(mapPointTime).forEach(function(key) {
-            if(mapPointTime[key] == 0) console.log(key, mapPointTime[key]);
-        });
         var pointList = Object.keys(mapPointTime);
         var pointsFeatures = [];
         for (var i = 0; i < pointList.length; i++) {
@@ -58,7 +55,6 @@
                         })
                     })
                 }));
-            if(time == 0) console.log(timeColor(time));
             pointsFeatures.push(feature);
         }
         return pointsFeatures;
@@ -138,6 +134,7 @@
                     contentType: "application/json; charset=utf-8",
                     type: "POST",
                     url: "/update",
+		    timeout: 0,
                     data: wktReader.writeFeature(e.feature, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' }),
                     success: function(data) {
                         var pointsFeatures = loadFeatures(data);
@@ -145,7 +142,9 @@
                         points.getSource().addFeatures(pointsFeatures);
                     },
                     error: function(jqXHR, textStatus, errorThrown) {
-                        console.log('error while post');
+                        console.log(jqXHR);
+			console.log(textStatus);
+			console.log(errorThrown);
                     }
                 });
             });
@@ -185,6 +184,7 @@
                     contentType: "application/json; charset=utf-8",
                     type: "POST",
                     url: "/grid",
+		    timeout: 0,
                     data: wktReader.writeFeatures(selected, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' }),
                     success: function(data) {
                         var pointsFeatures = loadFeatures(data);
@@ -192,7 +192,9 @@
                         points.getSource().addFeatures(pointsFeatures);
                     },
                     error: function(jqXHR, textStatus, errorThrown) {
-                        console.log('error while post');
+                        console.log(jqXHR);
+			console.log(textStatus);
+			console.log(errorThrown);
                     }
                 });
             });

@@ -16,10 +16,11 @@ import java.util.List;
 public class RouteController
 {
     private static final String allRoutesLocation = "/dynamicmap/allRoutes";
+    private static final String swapRoutesLocation = "/dynamicmap/allRoutes_swap";
 
     static SpatialRDD<Geometry> getAllRoutesRDD() throws IOException
     {
-        FileSystem hdfs = FileSystem.get(Application.sc.hadoopConfiguration());
+        FileSystem hdfs = Application.hdfs;
         Path path = new Path(allRoutesLocation);
         if(!hdfs.exists(path))
         {
@@ -27,7 +28,8 @@ public class RouteController
             emptyRDD.setRawSpatialRDD(Application.sc.emptyRDD());
             return emptyRDD;
         }
-        return WktReader.readToGeometryRDD(Application.sc, allRoutesLocation, 0, true, false);
+	SpatialRDD<Geometry> rdd = WktReader.readToGeometryRDD(Application.sc, allRoutesLocation, 0, true, false);
+        return rdd;
     }
 
     public static JavaRDD<Geometry> findIntersectedRoutes(LineString road) throws Exception
@@ -44,7 +46,12 @@ public class RouteController
                 .subtract(elementsToReplaceRDD);
         JavaRDD<Geometry> replacedRDD = subtractedRDD.union(elementsReplacingRDD);
         //TODO: jakiś backup
-        replacedRDD.saveAsTextFile(allRoutesLocation);
+        replacedRDD.saveAsTextFile(swapRoutesLocation);
+        FileSystem hdfs = Application.hdfs;
+        Path allRoutesPath = new Path(allRoutesLocation);
+        Path swapRoutesPath = new Path(swapRoutesLocation);
+        hdfs.delete(allRoutesPath, true);
+        hdfs.rename(swapRoutesPath, allRoutesPath);
     }
 
     public static void addNewRoutes(List<Geometry> newRoutes) throws IOException

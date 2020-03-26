@@ -10,6 +10,7 @@ import org.apache.http.conn.HttpHostConnectException;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.geotools.geojson.geom.GeometryJSON;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
 
@@ -26,20 +27,22 @@ import static map.RouteController.addNewRoutes;
 @Controller
 public class DownloadController
 {
+    public static final String startOSRM = "/start";
+    static final String updateOSRM = "/update";
     static final String tripServiceOSRM = "/trip/v1/driving/";
     static final String nearestServiceOSRM = "/nearest/v1/driving/";
-    static final String updateOSRM = "/update";
-    static final String startOSRM = "/start";
     private static final String routeServiceOSRM = "/route/v1/driving/";
     private static final String schemeOSRM = "http";
     private static final String hostOSRM = "osrm-4027.cloud.plgrid.pl"; //"router.project-osrm.org"
     private static final String hostManageOSRM = "osrm-manage-4027.cloud.plgrid.pl";
 
-    static Geometry downloadOneRoute(Point start, Point end) throws Exception
+    public static void manageOSRM(String action) throws Exception
     {
-        List<Point> startEndPoints = Arrays.asList(start, end);
-        String response = getRouteResponse(startEndPoints);
-        return createLineStringRoute(response);
+        URL url = getURL(hostManageOSRM, action, new HashMap<>());
+        HttpClient client = HttpClientBuilder.create().build();
+        HttpResponse response = client.execute(new HttpGet(url.toString()));
+        response.getStatusLine().getStatusCode();
+	pingOSRM();
     }
 
     //TODO: sprawdzic czy pobral cala siatke
@@ -60,6 +63,13 @@ public class DownloadController
         addNewRoutes(newRoutes);
     }
 
+    static Geometry downloadOneRoute(Point start, Point end) throws Exception
+    {
+        List<Point> startEndPoints = Arrays.asList(start, end);
+        String response = getRouteResponse(startEndPoints);
+        return createLineStringRoute(response);
+    }
+
     static String getHttpResponse(String path, Map<String, String> parameters) throws Exception
     {
         URL url = getURL(hostOSRM, path, parameters);
@@ -67,9 +77,11 @@ public class DownloadController
         HttpResponse response = client.execute(new HttpGet(url.toString()));
         HttpEntity entityResponse = response.getEntity();
         String responseString = EntityUtils.toString(entityResponse, "UTF-8");
-        if(responseString.contains("502 Bad Gateway"))
+        if(!responseString.startsWith("{")) //to jest do wywalenia
         {
-            manageOSRM(startOSRM);
+	    Thread.sleep(1000);
+	    System.out.println(responseString);
+            //manageOSRM(startOSRM);
             response = client.execute(new HttpGet(url.toString()));
             entityResponse = response.getEntity();
             responseString = EntityUtils.toString(entityResponse, "UTF-8");
@@ -77,30 +89,21 @@ public class DownloadController
         return responseString;
     }
 
-    static void manageOSRM(String action) throws Exception
-    {
-        URL url = getURL(hostManageOSRM, action, new HashMap<>());
-        HttpClient client = HttpClientBuilder.create().build();
-        HttpResponse response = client.execute(new HttpGet(url.toString()));
-        response.getStatusLine().getStatusCode();
-        if(action.equals(startOSRM))
-            pingOSRM();
-    }
-
     private static void pingOSRM() throws Exception
     {
+	Thread.sleep(30000);
         URL url = getURL(hostOSRM, routeServiceOSRM, new HashMap<>());
         HttpClient client = HttpClientBuilder.create().build();
-        int pingCount=0;
-        while(pingCount<10)
+        HttpResponse response = client.execute(new HttpGet(url.toString()));
+        HttpEntity entityResponse = response.getEntity();
+        String responseString = EntityUtils.toString(entityResponse, "UTF-8");
+        while(!responseString.startsWith("{"))
         {
-            HttpResponse response = client.execute(new HttpGet(url.toString()));
-            HttpEntity entityResponse = response.getEntity();
-            String responseString = EntityUtils.toString(entityResponse, "UTF-8");
-            if(!responseString.contains("502 Bad Gateway"))
-                return;
+            System.out.println("I am waiting for OSRM response"); //ta linijke tez mozna wywalic
             Thread.sleep(1000);
-            pingCount++;
+            response = client.execute(new HttpGet(url.toString()));
+            entityResponse = response.getEntity();
+            responseString = EntityUtils.toString(entityResponse, "UTF-8");
         }
     }
 
@@ -127,18 +130,18 @@ public class DownloadController
 
     private static LineString createLineStringRoute(String response) throws IOException
     {
-        JSONObject responseJSON = new JSONObject(response);
-        Double time = responseJSON
-                .getJSONArray("routes")
-                .getJSONObject(0)
-                .getDouble("duration");
-        String geometryString = responseJSON
-                .getJSONArray("routes")
-                .getJSONObject(0)
-                .getJSONObject("geometry")
-                .toString();
-        GeometryJSON geometryJSON = new GeometryJSON();
-        LineString route = geometryJSON.readLine(geometryString);
+	JSONObject responseJSON = new JSONObject(response);
+	Double time = responseJSON
+	    .getJSONArray("routes")
+	    .getJSONObject(0)
+	    .getDouble("duration");
+	String geometryString = responseJSON
+	    .getJSONArray("routes")
+	    .getJSONObject(0)
+	    .getJSONObject("geometry")
+	    .toString();
+	GeometryJSON geometryJSON = new GeometryJSON();
+	LineString route = geometryJSON.readLine(geometryString);
         route.setUserData(time);
         return route;
     }
