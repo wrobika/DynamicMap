@@ -4,15 +4,22 @@ import com.vividsolutions.jts.geom.*;
 import com.vividsolutions.jts.geom.util.GeometryExtracter;
 import com.vividsolutions.jts.io.WKTReader;
 import org.apache.commons.math3.util.Precision;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.spark.SparkConf;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 
 import static map.GridController.getEmptyGrid;
 import static map.GridController.getTimeGrid;
@@ -21,6 +28,8 @@ import static osrm.UpdateController.updateRoads;
 
 @Controller
 public class MapController {
+
+    private static String measures = "/dynamicmap/measures";
 
     @GetMapping("/map2")
     public String map2(@RequestParam(required=false) List<String> coordinates, Model model)
@@ -71,6 +80,7 @@ public class MapController {
     public @ResponseBody
     Map<Point, Double> grid(@RequestBody String stringAmbulancePoints)
     {
+        long start = new Date().getTime();
         GeometryFactory geometryFactory = new GeometryFactory();
         List<Point> ambulances = new ArrayList<>();
         WKTReader wktReader = new WKTReader();
@@ -99,8 +109,9 @@ public class MapController {
                 ambulances.add(geometryFactory.createPoint(roundCoord));
             }
             Application.ambulances = ambulances;
-
             timeGrid = getTimeGrid();
+            long stop = new Date().getTime();
+            saveTime(start,stop);
         }
         catch(Exception ex)
         {
@@ -108,7 +119,6 @@ public class MapController {
             timeGrid = getEmptyGrid(true);
         }
         return timeGrid;
-
     }
 
     @RequestMapping(value = "/update", method=RequestMethod.POST)
@@ -117,10 +127,13 @@ public class MapController {
     {
         try
         {
+            long start = new Date().getTime();
             WKTReader wktReader = new WKTReader();
             Geometry geometry = wktReader.read(roadToUpdate);
             List<Coordinate> coordinates = Arrays.asList(geometry.getCoordinates());
             updateRoads(coordinates);
+            long stop = new Date().getTime();
+            saveTime(start,stop);
             return getTimeGrid();
         }
         catch(Exception ex)
@@ -128,5 +141,27 @@ public class MapController {
             ex.printStackTrace();
             return getEmptyGrid(true);
         }
+    }
+
+    private static void saveTime(long start, long stop) throws IOException
+    {
+        SparkConf conf = Application.sc.getConf();
+        String instances = conf.get("spark.executor.instances");
+        String cores = conf.get("spark.executor.cores");
+        String memory = conf.get("spark.executor.memory");
+        String id = conf.getAppId();
+        String timeFile = measures +"/n"+instances +"c"+cores +"m"+memory +"_"+id;
+
+        FileSystem hdfs = Application.hdfs;
+        Path path = new Path(measures);
+        if(!hdfs.exists(path))
+            hdfs.mkdirs(path);
+        Path timeFilePath = new Path(timeFile);
+        FSDataOutputStream outputStream = hdfs.create(timeFilePath);
+        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream));
+        writer.append(String.valueOf((stop-start)/60000.0));
+        writer.append("\n");
+        writer.flush();
+        writer.close();
     }
 }
