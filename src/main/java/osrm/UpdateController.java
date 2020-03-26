@@ -177,7 +177,7 @@ public class UpdateController
 
     private static void writeUpdateFile(LineString road, List nodes) throws IOException
     {
-        FileSystem hdfs = FileSystem.get(Application.sc.hadoopConfiguration());
+        FileSystem hdfs = Application.hdfs;
         Path path = new Path(modifiedRoadsLocation);
         if(!hdfs.exists(path))
             hdfs.mkdirs(path);

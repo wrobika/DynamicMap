@@ -37,9 +37,9 @@ public class Application {
         
 	sc = new JavaSparkContext(conf);
 	ambulances = new ArrayList<>();
-        hdfs = FileSystem.get(sc.hadoopConfiguration());
+	hdfs = FileSystem.get(sc.hadoopConfiguration());
 
-        copyRequiredFiles();
+	copyRequiredFiles();
 	manageOSRM(startOSRM);
         //createGrid();
     }
