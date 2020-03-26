@@ -145,13 +145,8 @@ public class MapController {
 
     private static void saveTime(long start, long stop) throws IOException
     {
-        SparkConf conf = Application.sc.getConf();
-        String instances = conf.get("spark.executor.instances");
-        String cores = conf.get("spark.executor.cores");
-        String memory = conf.get("spark.executor.memory");
-        String id = conf.getAppId();
-        String timeFile = measures +"/n"+instances +"c"+cores +"m"+memory +"_"+id;
-
+        String id = Application.sc.getConf().getAppId();
+        String timeFile = measures + "/n2c4_" +id;
         FileSystem hdfs = Application.hdfs;
         Path path = new Path(measures);
         if(!hdfs.exists(path))
