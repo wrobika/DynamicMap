@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static osrm.DownloadController.downloadAllRoutes;
 import static osrm.DownloadController.manageOSRM;
 import static osrm.DownloadController.startOSRM;
 
@@ -35,13 +36,14 @@ public class Application {
             .set("spark.kryo.registrator", GeoSparkKryoRegistrator.class.getName())
             .set("spark.hadoop.validateOutputSpecs", "false");
         
-	sc = new JavaSparkContext(conf);
-	ambulances = new ArrayList<>();
-	hdfs = FileSystem.get(sc.hadoopConfiguration());
+        sc = new JavaSparkContext(conf);
+        ambulances = new ArrayList<>();
+        hdfs = FileSystem.get(sc.hadoopConfiguration());
 
-	copyRequiredFiles();
-	manageOSRM(startOSRM);
         //createGrid();
+        //copyRequiredFiles();
+        manageOSRM(startOSRM);
+        downloadAllRoutes();
     }
 
     private static void copyRequiredFiles()

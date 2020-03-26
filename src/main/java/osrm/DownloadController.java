@@ -42,7 +42,13 @@ public class DownloadController
         HttpClient client = HttpClientBuilder.create().build();
         HttpResponse response = client.execute(new HttpGet(url.toString()));
         response.getStatusLine().getStatusCode();
-	pingOSRM();
+	    pingOSRM();
+    }
+
+    public static void downloadAllRoutes() throws Exception
+    {
+        List<Point> gridPoints = getGrid(true);
+        downloadRoutes(gridPoints);
     }
 
     //TODO: sprawdzic czy pobral cala siatke
@@ -50,6 +56,8 @@ public class DownloadController
     {
         List<Point> gridPoints = getGrid(false);
         List<Geometry> newRoutes = new ArrayList<>();
+        long size = startPoints.size();
+        long count = 0;
         for (Point start: startPoints)
         {
             for(Point pointFromGrid : gridPoints)
@@ -59,8 +67,9 @@ public class DownloadController
                 LineString route = createLineStringRoute(response);
                 newRoutes.add(route);
             }
+            addNewRoutes(newRoutes);
+            System.out.println("downloaded " + count++ +"/"+ size);
         }
-        addNewRoutes(newRoutes);
     }
 
     static Geometry downloadOneRoute(Point start, Point end) throws Exception
@@ -79,8 +88,8 @@ public class DownloadController
         String responseString = EntityUtils.toString(entityResponse, "UTF-8");
         if(!responseString.startsWith("{")) //to jest do wywalenia
         {
-	    Thread.sleep(1000);
-	    System.out.println(responseString);
+	        Thread.sleep(1000);
+	        System.out.println(responseString);
             //manageOSRM(startOSRM);
             response = client.execute(new HttpGet(url.toString()));
             entityResponse = response.getEntity();
@@ -91,7 +100,7 @@ public class DownloadController
 
     private static void pingOSRM() throws Exception
     {
-	Thread.sleep(30000);
+	    Thread.sleep(30000);
         URL url = getURL(hostOSRM, routeServiceOSRM, new HashMap<>());
         HttpClient client = HttpClientBuilder.create().build();
         HttpResponse response = client.execute(new HttpGet(url.toString()));
@@ -99,7 +108,7 @@ public class DownloadController
         String responseString = EntityUtils.toString(entityResponse, "UTF-8");
         while(!responseString.startsWith("{"))
         {
-            System.out.println("I am waiting for OSRM response"); //ta linijke tez mozna wywalic
+            System.out.println("I am waiting for OSRM response");
             Thread.sleep(1000);
             response = client.execute(new HttpGet(url.toString()));
             entityResponse = response.getEntity();
@@ -130,20 +139,20 @@ public class DownloadController
 
     private static LineString createLineStringRoute(String response) throws IOException
     {
-	JSONObject responseJSON = new JSONObject(response);
-	Double time = responseJSON
-	    .getJSONArray("routes")
-	    .getJSONObject(0)
-	    .getDouble("duration");
-	String geometryString = responseJSON
-	    .getJSONArray("routes")
-	    .getJSONObject(0)
-	    .getJSONObject("geometry")
-	    .toString();
-	GeometryJSON geometryJSON = new GeometryJSON();
-	LineString route = geometryJSON.readLine(geometryString);
-        route.setUserData(time);
-        return route;
+        JSONObject responseJSON = new JSONObject(response);
+        Double time = responseJSON
+            .getJSONArray("routes")
+            .getJSONObject(0)
+            .getDouble("duration");
+        String geometryString = responseJSON
+            .getJSONArray("routes")
+            .getJSONObject(0)
+            .getJSONObject("geometry")
+            .toString();
+        GeometryJSON geometryJSON = new GeometryJSON();
+        LineString route = geometryJSON.readLine(geometryString);
+            route.setUserData(time);
+            return route;
     }
 
     static String coordinatesToString(List<Coordinate> coordinates)
