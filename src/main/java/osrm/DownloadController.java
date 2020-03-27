@@ -79,6 +79,7 @@ public class DownloadController
             {
                 notDownloadedPoints.add(start);
                 System.out.println("! not downloaded " + ++notDownloaded);
+		Thread.sleep(10000);
             }
         }
         return notDownloadedPoints;
@@ -88,7 +89,17 @@ public class DownloadController
     {
         List<Point> startEndPoints = Arrays.asList(start, end);
         String response = getRouteResponse(startEndPoints);
-        return createLineStringRoute(response);
+    	while(true)
+        {
+            try
+            {
+                return createLineStringRoute(response);
+            }
+            catch(JSONException ex)
+            {
+                System.out.println("An error occurred while download. We will try again.");
+            }
+        }
     }
 
     static String getHttpResponse(String path, Map<String, String> parameters) throws Exception
