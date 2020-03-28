@@ -1,14 +1,15 @@
 package osrm;
 
 import com.vividsolutions.jts.geom.*;
+import map.Application;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.conn.HttpHostConnectException;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
+import org.apache.spark.api.java.JavaRDD;
 import org.geotools.geojson.geom.GeometryJSON;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -42,53 +43,44 @@ public class DownloadController
         HttpClient client = HttpClientBuilder.create().build();
         HttpResponse response = client.execute(new HttpGet(url.toString()));
         response.getStatusLine().getStatusCode();
+        if(action.equals(updateOSRM))
+            Thread.sleep(30000);
 	    pingOSRM();
     }
 
-    public static void downloadAllRoutes() throws Exception
+    public static void downloadRoutes(List<Point> startPoints) throws Exception
     {
-        List<Point> gridPoints = getGrid(true);
-        List<Point> notDownloaded = downloadRoutes(gridPoints);
-        while(!notDownloaded.isEmpty())
-            notDownloaded = downloadRoutes(notDownloaded);
-    }
-
-    public static List<Point> downloadRoutes(List<Point> startPoints) throws Exception
-    {
-        List<Point> gridPoints = getGrid(false);
         List<Geometry> newRoutes = new ArrayList<>();
-        List<Point> notDownloadedPoints = new ArrayList<>();
-        long size = startPoints.size();
-        long downloaded = 0;
-        long notDownloaded = 0;
-        for (Point start: startPoints)
+        List<Point> notDownloaded = getGrid(false);
+        while(!notDownloaded.isEmpty())
         {
-            try
-            {
-                for(Point pointFromGrid : gridPoints)
-                {
-                    List<Point> startEndPoints = Arrays.asList(start, pointFromGrid);
-                    String response = getRouteResponse(startEndPoints);
-                    LineString route = createLineStringRoute(response);
-                    newRoutes.add(route);
+            JavaRDD<Point> gridPointsRDD = Application.sc.parallelize(notDownloaded);
+            gridPointsRDD.foreach(endPoint -> {
+                for (Point startPoint : startPoints) {
+                    Geometry route = downloadOneRoute(startPoint, endPoint);
+                    if (route != null) {
+                        newRoutes.add(route);
+                        notDownloaded.remove(endPoint);
+                    }
                 }
-                addNewRoutes(newRoutes);
-                System.out.println("downloaded " + ++downloaded +"/"+ size);
-            }
-            catch(JSONException ex)
-            {
-                notDownloadedPoints.add(start);
-                System.out.println("! not downloaded " + ++notDownloaded);
-            }
+            });
+            System.out.println("We try again: " + notDownloaded.size());
         }
-        return notDownloadedPoints;
+        addNewRoutes(newRoutes);
     }
 
     static Geometry downloadOneRoute(Point start, Point end) throws Exception
     {
         List<Point> startEndPoints = Arrays.asList(start, end);
         String response = getRouteResponse(startEndPoints);
-        return createLineStringRoute(response);
+        try
+        {
+            return createLineStringRoute(response);
+        }
+        catch(JSONException ex)
+        {
+            return null;
+        }
     }
 
     static String getHttpResponse(String path, Map<String, String> parameters) throws Exception
@@ -111,7 +103,6 @@ public class DownloadController
 
     private static void pingOSRM() throws Exception
     {
-	    Thread.sleep(30000);
         URL url = getURL(hostOSRM, routeServiceOSRM, new HashMap<>());
         HttpClient client = HttpClientBuilder.create().build();
         HttpResponse response = client.execute(new HttpGet(url.toString()));

@@ -50,21 +50,36 @@ public class UpdateController
             writeUpdateFile(road, nodes);
             manageOSRM(updateOSRM);
             JavaRDD<Geometry> intersectedRoutesRDD = findIntersectedRoutes(road);
-            JavaRDD<Geometry> newRoutesRDD = intersectedRoutesRDD.map(route ->
-                downloadOneRoute(getStartPoint(route), getEndPoint(route))
-            );
-	    intersectedRoutesRDD.collect()
-                .forEach(route -> {
-                    System.out.println(route.getCoordinates()[route.getCoordinates().length-1]);
-                    System.out.println(route.getUserData().toString());   
+            List<Geometry> newRoutes = new ArrayList<>();
+            List<Geometry> notDownloaded = intersectedRoutesRDD.collect();
+            while(!notDownloaded.isEmpty())
+            {
+                JavaRDD<Geometry> notDownloadedRDD = Application.sc.parallelize(notDownloaded);
+                notDownloadedRDD.foreach(route -> {
+                    Geometry newRoute = downloadOneRoute(getStartPoint(route), getEndPoint(route));
+                    if(newRoute != null) {
+                        newRoutes.add(newRoute);
+                        notDownloaded.remove(route);
+                    }
                 });
-            newRoutesRDD.collect()
-                .forEach(route -> {
-                    System.out.println(route.getCoordinates()[route.getCoordinates().length-1]);
-                    System.out.println(route.getUserData().toString());
-                });
+                System.out.println("We try again: " + notDownloaded.size());
+            }
+            JavaRDD<Geometry> newRoutesRDD = Application.sc.parallelize(newRoutes);
+            printRoutes(intersectedRoutesRDD, newRoutes);
             replaceRoutes(intersectedRoutesRDD, newRoutesRDD);
         }
+    }
+
+    private static void printRoutes(JavaRDD<Geometry> intersectedRoutesRDD, List<Geometry> newRoutes)
+    {
+        intersectedRoutesRDD.collect().forEach(route -> {
+            System.out.println(route.getCoordinates()[route.getCoordinates().length-1]);
+            System.out.println(route.getUserData().toString());
+        });
+        newRoutes.forEach(route -> {
+            System.out.println(route.getCoordinates()[route.getCoordinates().length-1]);
+            System.out.println(route.getUserData().toString());
+        });
     }
 
     private static Tuple2<LineString, List> getRoadNodes(List<Coordinate> roadCoordinates) throws Exception
