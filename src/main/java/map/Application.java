@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static osrm.DownloadController.downloadAllRoutes;
 import static osrm.DownloadController.manageOSRM;
 import static osrm.DownloadController.startOSRM;
 
@@ -43,7 +42,6 @@ public class Application {
         //createGrid();
         //copyRequiredFiles();
         manageOSRM(startOSRM);
-        downloadAllRoutes();
     }
 
     private static void copyRequiredFiles()

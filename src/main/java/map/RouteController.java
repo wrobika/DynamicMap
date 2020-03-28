@@ -28,8 +28,7 @@ public class RouteController
             emptyRDD.setRawSpatialRDD(Application.sc.emptyRDD());
             return emptyRDD;
         }
-	SpatialRDD<Geometry> rdd = WktReader.readToGeometryRDD(Application.sc, allRoutesLocation, 0, true, false);
-        return rdd;
+	    return WktReader.readToGeometryRDD(Application.sc, allRoutesLocation, 0, true, false);
     }
 
     public static JavaRDD<Geometry> findIntersectedRoutes(LineString road) throws Exception
