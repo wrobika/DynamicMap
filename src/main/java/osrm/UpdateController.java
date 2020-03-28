@@ -3,6 +3,7 @@ package osrm;
 import com.vividsolutions.jts.geom.*;
 import map.Application;
 import org.apache.hadoop.fs.*;
+import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -50,33 +51,34 @@ public class UpdateController
             writeUpdateFile(road, nodes);
             manageOSRM(updateOSRM);
             JavaRDD<Geometry> intersectedRoutesRDD = findIntersectedRoutes(road);
-            List<Geometry> newRoutes = new ArrayList<>();
-            List<Geometry> notDownloaded = intersectedRoutesRDD.collect();
-            while(!notDownloaded.isEmpty())
+            JavaRDD<Geometry> newRoutesRDD = Application.sc.emptyRDD();
+            JavaRDD<Geometry> toDownloadRDD = intersectedRoutesRDD.map(route -> route);
+            JavaPairRDD<Geometry, Geometry> notDownloadedRDD;
+            JavaPairRDD<Geometry, Geometry> downloadedRDD;
+            while(!toDownloadRDD.isEmpty())
             {
-                JavaRDD<Geometry> notDownloadedRDD = Application.sc.parallelize(notDownloaded);
-                notDownloadedRDD.foreach(route -> {
-                    Geometry newRoute = downloadOneRoute(getStartPoint(route), getEndPoint(route));
-                    if(newRoute != null) {
-                        newRoutes.add(newRoute);
-                        notDownloaded.remove(route);
-                    }
+                JavaPairRDD<Geometry, Geometry> oldAndNewRoutes = toDownloadRDD.mapToPair(oldRoute -> {
+                    Geometry newRoute = downloadOneRoute(getStartPoint(oldRoute), getEndPoint(oldRoute));
+                    return new Tuple2<>(oldRoute, newRoute);
                 });
-                System.out.println("We try again: " + notDownloaded.size());
+                downloadedRDD = oldAndNewRoutes.filter(pair -> pair._2 != null);
+                notDownloadedRDD = oldAndNewRoutes.filter(pair -> pair._2 == null);
+                toDownloadRDD = notDownloadedRDD.keys();
+                newRoutesRDD.union(downloadedRDD.values());
+                System.out.println("We try again: " + notDownloadedRDD.count());
             }
-            JavaRDD<Geometry> newRoutesRDD = Application.sc.parallelize(newRoutes);
-            printRoutes(intersectedRoutesRDD, newRoutes);
+            printRoutes(intersectedRoutesRDD, newRoutesRDD);
             replaceRoutes(intersectedRoutesRDD, newRoutesRDD);
         }
     }
 
-    private static void printRoutes(JavaRDD<Geometry> intersectedRoutesRDD, List<Geometry> newRoutes)
+    private static void printRoutes(JavaRDD<Geometry> intersectedRoutesRDD, JavaRDD<Geometry> newRoutesRDD)
     {
         intersectedRoutesRDD.collect().forEach(route -> {
             System.out.println(route.getCoordinates()[route.getCoordinates().length-1]);
             System.out.println(route.getUserData().toString());
         });
-        newRoutes.forEach(route -> {
+        newRoutesRDD.collect().forEach(route -> {
             System.out.println(route.getCoordinates()[route.getCoordinates().length-1]);
             System.out.println(route.getUserData().toString());
         });

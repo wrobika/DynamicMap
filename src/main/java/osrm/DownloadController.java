@@ -9,11 +9,13 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
+import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.geotools.geojson.geom.GeometryJSON;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
+import scala.Tuple2;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -50,23 +52,28 @@ public class DownloadController
 
     public static void downloadRoutes(List<Point> startPoints) throws Exception
     {
-        List<Geometry> newRoutes = new ArrayList<>();
-        List<Point> notDownloaded = getGrid(false);
-        while(!notDownloaded.isEmpty())
+        List<Point> gridPoints = getGrid(false);
+        JavaRDD<Geometry> newRoutesRDD = Application.sc.emptyRDD();
+        JavaPairRDD<Point, Geometry> notDownloadedRDD;
+        JavaPairRDD<Point, Geometry> downloadedRDD;
+        for (Point startPoint : startPoints)
         {
-            JavaRDD<Point> gridPointsRDD = Application.sc.parallelize(notDownloaded);
-            gridPointsRDD.foreach(endPoint -> {
-                for (Point startPoint : startPoints) {
+            JavaRDD<Point> toDownloadRDD = Application.sc.parallelize(gridPoints);
+            while(!toDownloadRDD.isEmpty())
+            {
+                JavaPairRDD<Point, Geometry> endAndRouteRDD = toDownloadRDD.mapToPair(endPoint -> {
                     Geometry route = downloadOneRoute(startPoint, endPoint);
-                    if (route != null) {
-                        newRoutes.add(route);
-                        notDownloaded.remove(endPoint);
-                    }
-                }
-            });
-            System.out.println("We try again: " + notDownloaded.size());
+                    return new Tuple2<>(endPoint, route);
+                });
+                downloadedRDD = endAndRouteRDD.filter(pair -> pair._2 != null);
+                notDownloadedRDD = endAndRouteRDD.filter(pair -> pair._2 == null);
+                toDownloadRDD = notDownloadedRDD.keys();
+                newRoutesRDD.union(downloadedRDD.values());
+                System.out.println("We try again for: " + notDownloadedRDD.count());
+            }
+            addNewRoutes(newRoutesRDD);
+            newRoutesRDD = Application.sc.emptyRDD();
         }
-        addNewRoutes(newRoutes);
     }
 
     static Geometry downloadOneRoute(Point start, Point end) throws Exception

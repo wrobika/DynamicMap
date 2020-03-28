@@ -53,9 +53,8 @@ public class RouteController
         hdfs.rename(swapRoutesPath, allRoutesPath);
     }
 
-    public static void addNewRoutes(List<Geometry> newRoutes) throws IOException
+    public static void addNewRoutes(JavaRDD<Geometry> newRoutesRDD) throws IOException
     {
-        JavaRDD<Geometry> newRoutesRDD = Application.sc.parallelize(newRoutes);
         SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
         JavaRDD<Geometry> unionRDD = allRoutesRDD.rawSpatialRDD.union(newRoutesRDD);
         unionRDD.saveAsTextFile(allRoutesLocation);
