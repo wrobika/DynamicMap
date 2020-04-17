@@ -36,8 +36,16 @@ public class DownloadController
     static final String nearestServiceOSRM = "/nearest/v1/driving/";
     private static final String routeServiceOSRM = "/route/v1/driving/";
     private static final String schemeOSRM = "http";
-    private static final String hostOSRM = "osrm-4027.cloud.plgrid.pl"; //"router.project-osrm.org"
+    private static final String[] hostOSRM = new String[] {
+            "osrm-4027.cloud.plgrid.pl",
+            "osrm1-4027.cloud.plgrid.pl",
+            "osrm2-4027.cloud.plgrid.pl",
+            "osrm3-4027.cloud.plgrid.pl",
+            "osrm4-4027.cloud.plgrid.pl",
+            "osrm5-4027.cloud.plgrid.pl"
+    };
     private static final String hostManageOSRM = "osrm-manage-4027.cloud.plgrid.pl";
+    private static Random rand = new Random();
 
     public static void manageOSRM(String action) throws Exception
     {
@@ -47,7 +55,7 @@ public class DownloadController
         response.getStatusLine().getStatusCode();
         if(action.equals(updateOSRM))
             Thread.sleep(30000);
-	    pingOSRM();
+	pingOSRM();
     }
 
     public static void downloadRoutes(List<Point> startPoints) throws Exception
@@ -69,7 +77,8 @@ public class DownloadController
                 notDownloadedRDD = endAndRouteRDD.filter(pair -> pair._2 == null);
                 toDownloadRDD = notDownloadedRDD.keys();
                 newRoutesRDD.union(downloadedRDD.values());
-                System.out.println("We try again for: " + notDownloadedRDD.count());
+		System.out.println("\n\n\nWe try again for: \n\n\n");
+                System.out.println(endAndRouteRDD.count());
             }
             addNewRoutes(newRoutesRDD);
             newRoutesRDD = Application.sc.emptyRDD();
@@ -92,25 +101,27 @@ public class DownloadController
 
     static String getHttpResponse(String path, Map<String, String> parameters) throws Exception
     {
-        URL url = getURL(hostOSRM, path, parameters);
+	int port = rand.nextInt(5)+1;
+	System.out.println(port);
+        URL url = getURL(hostOSRM[port], path, parameters);
         HttpClient client = HttpClientBuilder.create().build();
         HttpResponse response = client.execute(new HttpGet(url.toString()));
         HttpEntity entityResponse = response.getEntity();
         String responseString = EntityUtils.toString(entityResponse, "UTF-8");
-        if(!responseString.startsWith("{")) //to jest do wywalenia
+        /*if(!responseString.startsWith("{")) //to jest do wywalenia
         {
 	        Thread.sleep(5000);
 	        System.out.println(responseString);
             response = client.execute(new HttpGet(url.toString()));
             entityResponse = response.getEntity();
             responseString = EntityUtils.toString(entityResponse, "UTF-8");
-        }
+        }*/
         return responseString;
     }
 
     private static void pingOSRM() throws Exception
     {
-        URL url = getURL(hostOSRM, routeServiceOSRM, new HashMap<>());
+        URL url = getURL(hostOSRM[1], routeServiceOSRM, new HashMap<>());
         HttpClient client = HttpClientBuilder.create().build();
         HttpResponse response = client.execute(new HttpGet(url.toString()));
         HttpEntity entityResponse = response.getEntity();
