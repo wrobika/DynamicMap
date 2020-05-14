@@ -38,11 +38,10 @@ public class DownloadController
     private static final String schemeOSRM = "http";
     private static final String[] hostOSRM = new String[] {
             "osrm-4027.cloud.plgrid.pl",
-            "osrm1-4027.cloud.plgrid.pl",
+            "osrm1-4199.cloud.plgrid.pl",
             "osrm2-4027.cloud.plgrid.pl",
-            "osrm3-4027.cloud.plgrid.pl",
-            "osrm4-4027.cloud.plgrid.pl",
-            "osrm5-4027.cloud.plgrid.pl"
+            "osrm3-4199.cloud.plgrid.pl",
+            "osrm4-4027.cloud.plgrid.pl"
     };
     private static final String hostManageOSRM = "osrm-manage-4027.cloud.plgrid.pl";
     private static Random rand = new Random();
@@ -78,7 +77,8 @@ public class DownloadController
                 toDownloadRDD = notDownloadedRDD.keys();
                 newRoutesRDD.union(downloadedRDD.values());
 		System.out.println("\n\n\nWe try again for: \n\n\n");
-                System.out.println(endAndRouteRDD.count());
+                System.out.println(notDownloaded.count());
+		System.out.println("\n\n\n");
             }
             addNewRoutes(newRoutesRDD);
             newRoutesRDD = Application.sc.emptyRDD();
@@ -101,7 +101,7 @@ public class DownloadController
 
     static String getHttpResponse(String path, Map<String, String> parameters) throws Exception
     {
-	int port = rand.nextInt(5)+1;
+	int port = rand.nextInt(4)+1;
 	System.out.println(port);
         URL url = getURL(hostOSRM[port], path, parameters);
         HttpClient client = HttpClientBuilder.create().build();
