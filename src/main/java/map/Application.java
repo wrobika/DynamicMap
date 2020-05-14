@@ -30,7 +30,7 @@ public class Application {
         SpringApplication.run(Application.class, args);
 
         SparkConf conf = new SparkConf().setAppName("DynamicMap")
-            .setMaster("spark://master:7077")
+            .setMaster("spark://master1:7077")
             .set("spark.serializer", KryoSerializer.class.getName())
             .set("spark.kryo.registrator", GeoSparkKryoRegistrator.class.getName())
             .set("spark.hadoop.validateOutputSpecs", "false");
@@ -40,7 +40,7 @@ public class Application {
         hdfs = FileSystem.get(sc.hadoopConfiguration());
 
         //createGrid();
-        //copyRequiredFiles();
+        copyRequiredFiles();
         manageOSRM(startOSRM);
     }
 
