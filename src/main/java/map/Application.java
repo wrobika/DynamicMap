@@ -30,10 +30,12 @@ public class Application {
         SpringApplication.run(Application.class, args);
 
         SparkConf conf = new SparkConf().setAppName("DynamicMap")
-            .setMaster("spark://master1:7077")
+            //.setMaster("spark://master:7077")
+	    .setMaster("local[*]")
             .set("spark.serializer", KryoSerializer.class.getName())
             .set("spark.kryo.registrator", GeoSparkKryoRegistrator.class.getName())
             .set("spark.hadoop.validateOutputSpecs", "false");
+	    //.set("spark.driver.host", "master");
         
         sc = new JavaSparkContext(conf);
         ambulances = new ArrayList<>();

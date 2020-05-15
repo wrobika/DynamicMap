@@ -36,13 +36,14 @@ public class DownloadController
     static final String nearestServiceOSRM = "/nearest/v1/driving/";
     private static final String routeServiceOSRM = "/route/v1/driving/";
     private static final String schemeOSRM = "http";
-    private static final String[] hostOSRM = new String[] {
+    /*private static final String[] hostOSRM = new String[] {
             "osrm-4027.cloud.plgrid.pl",
             "osrm1-4199.cloud.plgrid.pl",
             "osrm2-4027.cloud.plgrid.pl",
             "osrm3-4199.cloud.plgrid.pl",
             "osrm4-4027.cloud.plgrid.pl"
-    };
+    };*/
+    private static final String hostOSRM = "localhost:5000";
     private static final String hostManageOSRM = "osrm-manage-4027.cloud.plgrid.pl";
     private static Random rand = new Random();
 
@@ -72,13 +73,19 @@ public class DownloadController
                     Geometry route = downloadOneRoute(startPoint, endPoint);
                     return new Tuple2<>(endPoint, route);
                 });
+		endAndRouteRDD.cache();
                 downloadedRDD = endAndRouteRDD.filter(pair -> pair._2 != null);
-                notDownloadedRDD = endAndRouteRDD.filter(pair -> pair._2 == null);
+                downloadedRDD.cache();
+		notDownloadedRDD = endAndRouteRDD.filter(pair -> pair._2 == null);
+		notDownloadedRDD.cache();
                 toDownloadRDD = notDownloadedRDD.keys();
-                newRoutesRDD.union(downloadedRDD.values());
-		System.out.println("\n\n\nWe try again for: \n\n\n");
-                System.out.println(notDownloaded.count());
-		System.out.println("\n\n\n");
+		toDownloadRDD.cache();
+                newRoutesRDD = newRoutesRDD.union(downloadedRDD.values());
+		newRoutesRDD.cache();
+		
+		System.out.println("\n\n\ntodownoload\n\n\n");
+                System.out.println(toDownloadRDD.count());
+                System.out.println("\n\n\n");
             }
             addNewRoutes(newRoutesRDD);
             newRoutesRDD = Application.sc.emptyRDD();
@@ -87,6 +94,7 @@ public class DownloadController
 
     static Geometry downloadOneRoute(Point start, Point end) throws Exception
     {
+	Thread.sleep(38);
         List<Point> startEndPoints = Arrays.asList(start, end);
         String response = getRouteResponse(startEndPoints);
         try
@@ -101,9 +109,9 @@ public class DownloadController
 
     static String getHttpResponse(String path, Map<String, String> parameters) throws Exception
     {
-	int port = rand.nextInt(4)+1;
-	System.out.println(port);
-        URL url = getURL(hostOSRM[port], path, parameters);
+	//int port = rand.nextInt(4)+1;
+	//System.out.println(port);
+        URL url = getURL(hostOSRM, path, parameters);
         HttpClient client = HttpClientBuilder.create().build();
         HttpResponse response = client.execute(new HttpGet(url.toString()));
         HttpEntity entityResponse = response.getEntity();
@@ -121,7 +129,7 @@ public class DownloadController
 
     private static void pingOSRM() throws Exception
     {
-        URL url = getURL(hostOSRM[1], routeServiceOSRM, new HashMap<>());
+        URL url = getURL(hostOSRM, routeServiceOSRM, new HashMap<>());
         HttpClient client = HttpClientBuilder.create().build();
         HttpResponse response = client.execute(new HttpGet(url.toString()));
         HttpEntity entityResponse = response.getEntity();

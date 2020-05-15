@@ -111,6 +111,9 @@ public class MapController {
             Application.ambulances = ambulances;
             timeGrid = getTimeGrid();
             long stop = new Date().getTime();
+	    System.out.println("\n\n\n");
+	    System.out.println((stop-start)/60000.0);
+	    System.out.println("\n\n\n");
             saveTime(start,stop);
         }
         catch(Exception ex)
