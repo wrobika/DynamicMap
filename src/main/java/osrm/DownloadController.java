@@ -37,15 +37,57 @@ public class DownloadController
     private static final String routeServiceOSRM = "/route/v1/driving/";
     private static final String schemeOSRM = "http";
     /*private static final String[] hostOSRM = new String[] {
-            "osrm-4027.cloud.plgrid.pl",
+            "osrm-4199.cloud.plgrid.pl",
             "osrm1-4199.cloud.plgrid.pl",
-            "osrm2-4027.cloud.plgrid.pl",
+            "osrm2-4199.cloud.plgrid.pl",
             "osrm3-4199.cloud.plgrid.pl",
-            "osrm4-4027.cloud.plgrid.pl"
+            "osrm4-4199.cloud.plgrid.pl",
+	    "osrm5-4199.cloud.plgrid.pl"
     };*/
     private static final String hostOSRM = "localhost:5000";
     private static final String hostManageOSRM = "osrm-manage-4027.cloud.plgrid.pl";
     private static Random rand = new Random();
+    private static final String scriptUpdateOSRM = "/home/ubuntu/updateAllOSRM.sh";
+    private static final String scriptStartOSRM = "/home/ubuntu/startAllOSRM.sh";
+    private static final String scriptPingOSRM = "/home/ubuntu/pingOSRM.sh";
+
+    public static void startOSRM() throws Exception
+    {
+        try
+        {
+            Runtime.getRuntime().exec(scriptStartOSRM);
+	    pingOSRM();
+        }
+        catch(IOException ex)
+        {
+            ex.printStackTrace();
+        }
+    }
+
+    public static void updateOSRM() throws Exception
+    {
+        try
+        {
+	    Runtime.getRuntime().exec(scriptUpdateOSRM);
+	    Thread.sleep(30000);
+	    pingOSRM();
+        }
+        catch(Exception ex)
+        {
+            ex.printStackTrace();
+        }
+    }
+
+    public static void pingOSRM() throws Exception
+    {
+	Process process = Runtime.getRuntime().exec(scriptPingOSRM);
+        while (process.waitFor() != 0)
+        {
+            System.out.println("I am waiting for OSRM response");
+            Thread.sleep(1000);
+            process = Runtime.getRuntime().exec(scriptPingOSRM);
+        }
+    }
 
     public static void manageOSRM(String action) throws Exception
     {
@@ -109,7 +151,8 @@ public class DownloadController
 
     static String getHttpResponse(String path, Map<String, String> parameters) throws Exception
     {
-	//int port = rand.nextInt(4)+1;
+	//Thread.sleep(7);
+	//int port = rand.nextInt(5)+1;
 	//System.out.println(port);
         URL url = getURL(hostOSRM, path, parameters);
         HttpClient client = HttpClientBuilder.create().build();
@@ -127,7 +170,7 @@ public class DownloadController
         return responseString;
     }
 
-    private static void pingOSRM() throws Exception
+    /*private static void pingOSRM() throws Exception
     {
         URL url = getURL(hostOSRM, routeServiceOSRM, new HashMap<>());
         HttpClient client = HttpClientBuilder.create().build();
@@ -142,7 +185,7 @@ public class DownloadController
             entityResponse = response.getEntity();
             responseString = EntityUtils.toString(entityResponse, "UTF-8");
         }
-    }
+    }*/
 
     private static URL getURL(String host, String path, Map<String, String> parameters) throws URISyntaxException, MalformedURLException
     {
