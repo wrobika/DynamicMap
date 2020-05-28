@@ -114,7 +114,7 @@ public class MapController {
 	    System.out.println("\n\n\n");
 	    System.out.println((stop-start)/60000.0);
 	    System.out.println("\n\n\n");
-            saveTime(start,stop);
+            //saveTime(start,stop);
         }
         catch(Exception ex)
         {
@@ -136,7 +136,11 @@ public class MapController {
             List<Coordinate> coordinates = Arrays.asList(geometry.getCoordinates());
             updateRoads(coordinates);
             long stop = new Date().getTime();
-            saveTime(start,stop);
+            //saveTime(start,stop);
+	    System.out.println("\n\n\n");
+            System.out.println((stop-start)/60000.0);
+            System.out.println("\n\n\n");
+
             return getTimeGrid();
         }
         catch(Exception ex)
