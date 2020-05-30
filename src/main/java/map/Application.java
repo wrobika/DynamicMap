@@ -15,10 +15,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static osrm.DownloadController.manageOSRM;
 import static osrm.DownloadController.startOSRM;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = { "map", "tests"} )
 public class Application {
 
     public static JavaSparkContext sc;

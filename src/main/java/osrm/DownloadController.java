@@ -36,16 +36,7 @@ public class DownloadController
     static final String nearestServiceOSRM = "/nearest/v1/driving/";
     private static final String routeServiceOSRM = "/route/v1/driving/";
     private static final String schemeOSRM = "http";
-    /*private static final String[] hostOSRM = new String[] {
-            "osrm-4199.cloud.plgrid.pl",
-            "osrm1-4199.cloud.plgrid.pl",
-            "osrm2-4199.cloud.plgrid.pl",
-            "osrm3-4199.cloud.plgrid.pl",
-            "osrm4-4199.cloud.plgrid.pl",
-	    "osrm5-4199.cloud.plgrid.pl"
-    };*/
     private static final String hostOSRM = "localhost:5000";
-    private static final String hostManageOSRM = "osrm-manage-4027.cloud.plgrid.pl";
     private static Random rand = new Random();
     private static final String scriptUpdateOSRM = "/home/ubuntu/updateAllOSRM.sh";
     private static final String scriptStartOSRM = "/home/ubuntu/startAllOSRM.sh";
@@ -89,46 +80,15 @@ public class DownloadController
         }
     }
 
-    public static void manageOSRM(String action) throws Exception
-    {
-        URL url = getURL(hostManageOSRM, action, new HashMap<>());
-        HttpClient client = HttpClientBuilder.create().build();
-        HttpResponse response = client.execute(new HttpGet(url.toString()));
-        response.getStatusLine().getStatusCode();
-        if(action.equals(updateOSRM))
-            Thread.sleep(30000);
-	pingOSRM();
-    }
-
     public static void downloadRoutes(List<Point> startPoints) throws Exception
     {
         List<Point> gridPoints = getGrid(false);
-        JavaRDD<Geometry> newRoutesRDD = Application.sc.emptyRDD();
-        JavaPairRDD<Point, Geometry> notDownloadedRDD;
-        JavaPairRDD<Point, Geometry> downloadedRDD;
         for (Point startPoint : startPoints)
         {
             JavaRDD<Point> toDownloadRDD = Application.sc.parallelize(gridPoints);
-            while(!toDownloadRDD.isEmpty())
-            {
-                JavaPairRDD<Point, Geometry> endAndRouteRDD = toDownloadRDD.mapToPair(endPoint -> {
-                    Geometry route = downloadOneRoute(startPoint, endPoint);
-                    return new Tuple2<>(endPoint, route);
-                });
-		endAndRouteRDD.cache();
-                downloadedRDD = endAndRouteRDD.filter(pair -> pair._2 != null);
-                downloadedRDD.cache();
-		notDownloadedRDD = endAndRouteRDD.filter(pair -> pair._2 == null);
-		notDownloadedRDD.cache();
-                toDownloadRDD = notDownloadedRDD.keys();
-		toDownloadRDD.cache();
-                newRoutesRDD = newRoutesRDD.union(downloadedRDD.values());
-		newRoutesRDD.cache();
-		
-		System.out.println("\n\n\ntodownoload\n\n\n");
-                System.out.println(toDownloadRDD.count());
-                System.out.println("\n\n\n");
-            }
+            JavaRDD<Geometry> newRoutesRDD = toDownloadRDD.map(endPoint ->
+                    downloadOneRoute(startPoint, endPoint));
+	    newRoutesRDD.cache();	
             addNewRoutes(newRoutesRDD);
             newRoutesRDD = Application.sc.emptyRDD();
         }
@@ -151,41 +111,13 @@ public class DownloadController
 
     static String getHttpResponse(String path, Map<String, String> parameters) throws Exception
     {
-	//Thread.sleep(7);
-	//int port = rand.nextInt(5)+1;
-	//System.out.println(port);
         URL url = getURL(hostOSRM, path, parameters);
         HttpClient client = HttpClientBuilder.create().build();
         HttpResponse response = client.execute(new HttpGet(url.toString()));
         HttpEntity entityResponse = response.getEntity();
         String responseString = EntityUtils.toString(entityResponse, "UTF-8");
-        /*if(!responseString.startsWith("{")) //to jest do wywalenia
-        {
-	        Thread.sleep(5000);
-	        System.out.println(responseString);
-            response = client.execute(new HttpGet(url.toString()));
-            entityResponse = response.getEntity();
-            responseString = EntityUtils.toString(entityResponse, "UTF-8");
-        }*/
         return responseString;
     }
-
-    /*private static void pingOSRM() throws Exception
-    {
-        URL url = getURL(hostOSRM, routeServiceOSRM, new HashMap<>());
-        HttpClient client = HttpClientBuilder.create().build();
-        HttpResponse response = client.execute(new HttpGet(url.toString()));
-        HttpEntity entityResponse = response.getEntity();
-        String responseString = EntityUtils.toString(entityResponse, "UTF-8");
-        while(!responseString.startsWith("{"))
-        {
-            System.out.println("I am waiting for OSRM response");
-            Thread.sleep(1000);
-            response = client.execute(new HttpGet(url.toString()));
-            entityResponse = response.getEntity();
-            responseString = EntityUtils.toString(entityResponse, "UTF-8");
-        }
-    }*/
 
     private static URL getURL(String host, String path, Map<String, String> parameters) throws URISyntaxException, MalformedURLException
     {
