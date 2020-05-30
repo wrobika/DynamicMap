@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static osrm.DownloadController.startOSRM;
+import static osrm.OsrmController.startOSRM;
 
 @SpringBootApplication(scanBasePackages = { "map", "tests"} )
 public class Application {
@@ -24,8 +24,7 @@ public class Application {
     public static List<Point> ambulances;
     public static FileSystem hdfs;
 
-    public static void main(String[] args) throws Exception
-    {
+    public static void main(String[] args) throws Exception {
         SpringApplication.run(Application.class, args);
 
         SparkConf conf = new SparkConf().setAppName("DynamicMap")
@@ -34,42 +33,39 @@ public class Application {
             .set("spark.serializer", KryoSerializer.class.getName())
             .set("spark.kryo.registrator", GeoSparkKryoRegistrator.class.getName())
             .set("spark.hadoop.validateOutputSpecs", "false");
-	    //.set("spark.driver.host", "master");
         
         sc = new JavaSparkContext(conf);
         ambulances = new ArrayList<>();
         hdfs = FileSystem.get(sc.hadoopConfiguration());
 
         //createGrid();
-        copyRequiredFiles();
+        copyRequiredFilesToHDFS();
         startOSRM();
     }
 
-    private static void copyRequiredFiles()
-    {
+    private static void copyRequiredFilesToHDFS() {
         String[] fileNames = new String[] {
             GridController.regularGridFile,
             GridController.irregularGridFile,
             GridController.boundaryKrakowLocation,
         };
-        try
-        {
+        try {
             for(String file : fileNames)
-            {
-                FileSystem hdfs = Application.hdfs;
-                Path path = new Path(file);
-                if(!hdfs.exists(path))
-                {
-                    Configuration conf = new Configuration();
-                    FileSystem localFS = FileSystem.getLocal(conf);
-                    Path localPath = new Path(localFS.getHomeDirectory().toString() + file);
-                    hdfs.copyFromLocalFile(localPath, path);
-                }
-            }
-        }
-        catch(IOException ex)
-        {
+                copyFileToHDFS(file);
+        } catch(IOException ex) {
             ex.printStackTrace();
+        }
+    }
+
+    private static void copyFileToHDFS(String file) throws IOException
+    {
+        FileSystem hdfs = Application.hdfs;
+        Path path = new Path(file);
+        if(!hdfs.exists(path)) {
+            Configuration conf = new Configuration();
+            FileSystem localFS = FileSystem.getLocal(conf);
+            Path localPath = new Path(localFS.getHomeDirectory().toString() + file);
+            hdfs.copyFromLocalFile(localPath, path);
         }
     }
 }

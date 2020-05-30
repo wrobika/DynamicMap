@@ -28,99 +28,40 @@ import static map.GridController.getGrid;
 import static map.RouteController.addNewRoutes;
 
 @Controller
-public class DownloadController
-{
-    public static final String startOSRM = "/start";
-    static final String updateOSRM = "/update";
+public class DownloadController {
     static final String tripServiceOSRM = "/trip/v1/driving/";
     static final String nearestServiceOSRM = "/nearest/v1/driving/";
     private static final String routeServiceOSRM = "/route/v1/driving/";
     private static final String schemeOSRM = "http";
     private static final String hostOSRM = "localhost:5000";
-    private static Random rand = new Random();
-    private static final String scriptUpdateOSRM = "/home/ubuntu/updateAllOSRM.sh";
-    private static final String scriptStartOSRM = "/home/ubuntu/startAllOSRM.sh";
-    private static final String scriptPingOSRM = "/home/ubuntu/pingOSRM.sh";
 
-    public static void startOSRM() throws Exception
-    {
-        try
-        {
-            Runtime.getRuntime().exec(scriptStartOSRM);
-	    pingOSRM();
-        }
-        catch(IOException ex)
-        {
-            ex.printStackTrace();
-        }
-    }
-
-    public static void updateOSRM() throws Exception
-    {
-        try
-        {
-	    Runtime.getRuntime().exec(scriptUpdateOSRM);
-	    Thread.sleep(30000);
-	    pingOSRM();
-        }
-        catch(Exception ex)
-        {
-            ex.printStackTrace();
-        }
-    }
-
-    public static void pingOSRM() throws Exception
-    {
-	Process process = Runtime.getRuntime().exec(scriptPingOSRM);
-        while (process.waitFor() != 0)
-        {
-            System.out.println("I am waiting for OSRM response");
-            Thread.sleep(1000);
-            process = Runtime.getRuntime().exec(scriptPingOSRM);
-        }
-    }
-
-    public static void downloadRoutes(List<Point> startPoints) throws Exception
-    {
+    public static void downloadRoutes(List<Point> startPoints) throws Exception {
         List<Point> gridPoints = getGrid(false);
-        for (Point startPoint : startPoints)
-        {
+        for (Point startPoint : startPoints) {
             JavaRDD<Point> toDownloadRDD = Application.sc.parallelize(gridPoints);
             JavaRDD<Geometry> newRoutesRDD = toDownloadRDD.map(endPoint ->
                     downloadOneRoute(startPoint, endPoint));
-	    newRoutesRDD.cache();	
+	        newRoutesRDD.cache();
             addNewRoutes(newRoutesRDD);
-            newRoutesRDD = Application.sc.emptyRDD();
         }
     }
 
-    static Geometry downloadOneRoute(Point start, Point end) throws Exception
-    {
-	Thread.sleep(38);
+    static Geometry downloadOneRoute(Point start, Point end) throws Exception {
+	    Thread.sleep(38);
         List<Point> startEndPoints = Arrays.asList(start, end);
         String response = getRouteResponse(startEndPoints);
-        try
-        {
-            return createLineStringRoute(response);
-        }
-        catch(JSONException ex)
-        {
-            return null;
-        }
+        return createLineStringRoute(response);
     }
 
-    static String getHttpResponse(String path, Map<String, String> parameters) throws Exception
-    {
+    static String getHttpResponse(String path, Map<String, String> parameters) throws Exception {
         URL url = getURL(hostOSRM, path, parameters);
         HttpClient client = HttpClientBuilder.create().build();
         HttpResponse response = client.execute(new HttpGet(url.toString()));
         HttpEntity entityResponse = response.getEntity();
-        String responseString = EntityUtils.toString(entityResponse, "UTF-8");
-        return responseString;
+        return EntityUtils.toString(entityResponse, "UTF-8");
     }
 
-    private static URL getURL(String host, String path, Map<String, String> parameters) throws URISyntaxException, MalformedURLException
-    {
+    private static URL getURL(String host, String path, Map<String, String> parameters) throws URISyntaxException, MalformedURLException {
         URIBuilder builder = new URIBuilder();
         builder.setScheme(schemeOSRM);
         builder.setHost(host);
@@ -129,10 +70,7 @@ public class DownloadController
         return builder.build().toURL();
     }
 
-    private static String getRouteResponse(List<Point> points) throws Exception
-    {
-        if(points.size() < 2)
-            throw new Exception("too few points to set route");
+    private static String getRouteResponse(List<Point> points) throws Exception {
         String pointsString = pointsToString(points);
         String path = routeServiceOSRM + pointsString;
         Map<String, String> parameters = new HashMap<>();
@@ -140,8 +78,7 @@ public class DownloadController
         return getHttpResponse(path,parameters);
     }
 
-    private static LineString createLineStringRoute(String response) throws IOException
-    {
+    private static LineString createLineStringRoute(String response) throws IOException {
         JSONObject responseJSON = new JSONObject(response);
         Double time = responseJSON
             .getJSONArray("routes")
@@ -154,12 +91,11 @@ public class DownloadController
             .toString();
         GeometryJSON geometryJSON = new GeometryJSON();
         LineString route = geometryJSON.readLine(geometryString);
-            route.setUserData(time);
-            return route;
+        route.setUserData(time);
+        return route;
     }
 
-    static String coordinatesToString(List<Coordinate> coordinates)
-    {
+    static String coordinatesToString(List<Coordinate> coordinates) {
         StringBuilder result = new StringBuilder();
         for (Coordinate coordinate : coordinates) {
             result.append(coordinate.x);
@@ -171,8 +107,7 @@ public class DownloadController
         return result.toString();
     }
 
-    private static String pointsToString(List<Point> points)
-    {
+    private static String pointsToString(List<Point> points) {
         StringBuilder result = new StringBuilder();
         for (Point point : points) {
             result.append(point.getX());

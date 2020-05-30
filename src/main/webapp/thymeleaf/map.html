@@ -130,12 +130,14 @@
             });
             map.addInteraction(interaction);
             interaction.on('drawend', function(e){
-		$.ajax({
+                var roadWKT = wktReader.writeFeature(e.feature, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' });
+		        console.log(roadWKT);
+		        $.ajax({
                     contentType: "application/json; charset=utf-8",
                     type: "POST",
                     url: "/update",
-		    timeout: 0,
-                    data: wktReader.writeFeature(e.feature, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' }),
+		            timeout: 0,
+                    data: roadWKT,
                     success: function(data) {
                         var pointsFeatures = loadFeatures(data);
                         points.getSource().clear();
@@ -143,8 +145,8 @@
                     },
                     error: function(jqXHR, textStatus, errorThrown) {
                         console.log(jqXHR);
-			console.log(textStatus);
-			console.log(errorThrown);
+			            console.log(textStatus);
+			            console.log(errorThrown);
                     }
                 });
             });
@@ -180,12 +182,13 @@
                     });
                 });
                 selected = selected.concat(selectFeatures);
-		var pointsWkt = wktReader.writeFeatures(selected, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' });
-                $.ajax({
+		        var pointsWkt = wktReader.writeFeatures(selected, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' });
+                console.log(pointsWkt);
+                /*$.ajax({
                     contentType: "application/json; charset=utf-8",
                     type: "POST",
                     url: "/grid",
-		    timeout: 0,
+		            timeout: 0,
                     data: pointsWkt,
                     success: function(data) {
                         var pointsFeatures = loadFeatures(data);
@@ -194,10 +197,10 @@
                     },
                     error: function(jqXHR, textStatus, errorThrown) {
                         console.log(jqXHR);
-			console.log(textStatus);
-			console.log(errorThrown);
+			            console.log(textStatus);
+			            console.log(errorThrown);
                     }
-                });
+                });*/
             });
         }
     };
