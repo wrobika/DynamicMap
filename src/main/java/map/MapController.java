@@ -112,9 +112,9 @@ public class MapController {
             timeGrid = getTimeGrid();
             long stop = new Date().getTime();
 	    System.out.println("\n\n\n");
-	    System.out.println((stop-start)/60000.0);
+	    System.out.println((stop-start)/1000.0);
 	    System.out.println("\n\n\n");
-            //saveTime(start,stop);
+            saveTime(start,stop);
         }
         catch(Exception ex)
         {
@@ -136,9 +136,9 @@ public class MapController {
             List<Coordinate> coordinates = Arrays.asList(geometry.getCoordinates());
             updateRoads(coordinates);
             long stop = new Date().getTime();
-            //saveTime(start,stop);
+            saveTime(start,stop);
 	    System.out.println("\n\n\n");
-            System.out.println((stop-start)/60000.0);
+            System.out.println((stop-start)/1000.0);
             System.out.println("\n\n\n");
 
             return getTimeGrid();
@@ -152,16 +152,19 @@ public class MapController {
 
     private static void saveTime(long start, long stop) throws IOException
     {
-        String id = Application.sc.getConf().getAppId();
-        String timeFile = measures + "/n2c4_" +id;
+        String timeFile = measures + "/n2c8g4_read";
         FileSystem hdfs = Application.hdfs;
         Path path = new Path(measures);
         if(!hdfs.exists(path))
             hdfs.mkdirs(path);
         Path timeFilePath = new Path(timeFile);
-        FSDataOutputStream outputStream = hdfs.create(timeFilePath);
+	FSDataOutputStream outputStream;
+	if(!hdfs.exists(timeFilePath))
+            outputStream = hdfs.create(timeFilePath);
+	else
+	    outputStream = hdfs.append(timeFilePath);
         BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(outputStream));
-        writer.append(String.valueOf((stop-start)/60000.0));
+        writer.append(String.valueOf((stop-start)/1000.0));
         writer.append("\n");
         writer.flush();
         writer.close();

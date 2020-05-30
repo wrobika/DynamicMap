@@ -130,7 +130,7 @@
             });
             map.addInteraction(interaction);
             interaction.on('drawend', function(e){
-                $.ajax({
+		$.ajax({
                     contentType: "application/json; charset=utf-8",
                     type: "POST",
                     url: "/update",
@@ -180,12 +180,13 @@
                     });
                 });
                 selected = selected.concat(selectFeatures);
+		var pointsWkt = wktReader.writeFeatures(selected, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' });
                 $.ajax({
                     contentType: "application/json; charset=utf-8",
                     type: "POST",
                     url: "/grid",
 		    timeout: 0,
-                    data: wktReader.writeFeatures(selected, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' }),
+                    data: pointsWkt,
                     success: function(data) {
                         var pointsFeatures = loadFeatures(data);
                         points.getSource().clear();

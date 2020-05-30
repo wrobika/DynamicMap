@@ -52,23 +52,6 @@ public class UpdateController
             updateOSRM();
             JavaRDD<Geometry> intersectedRoutesRDD = findIntersectedRoutes(road);
 	    intersectedRoutesRDD.cache();
-            /*JavaRDD<Geometry> newRoutesRDD = Application.sc.emptyRDD();
-            JavaRDD<Geometry> toDownloadRDD = intersectedRoutesRDD.map(route -> route);
-            JavaPairRDD<Geometry, Geometry> notDownloadedRDD;
-            JavaPairRDD<Geometry, Geometry> downloadedRDD;
-            while(!toDownloadRDD.isEmpty())
-            {
-                JavaPairRDD<Geometry, Geometry> oldAndNewRoutes = toDownloadRDD.mapToPair(oldRoute -> {
-                    Geometry newRoute = downloadOneRoute(getStartPoint(oldRoute), getEndPoint(oldRoute));
-                    return new Tuple2<>(oldRoute, newRoute);
-                });
-                downloadedRDD = oldAndNewRoutes.filter(pair -> pair._2 != null);
-                notDownloadedRDD = oldAndNewRoutes.filter(pair -> pair._2 == null);
-                toDownloadRDD = notDownloadedRDD.keys();
-                newRoutesRDD.union(downloadedRDD.values());
-                System.out.println("We try again: " + notDownloadedRDD.count());
-            }*/
-            //printRoutes(intersectedRoutesRDD, newRoutesRDD);
 	    JavaRDD<Geometry> newRoutesRDD = intersectedRoutesRDD.map(oldRoute -> 
 		downloadOneRoute(getStartPoint(oldRoute), getEndPoint(oldRoute)));
             newRoutesRDD.cache();
