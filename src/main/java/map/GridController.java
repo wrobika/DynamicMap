@@ -21,18 +21,13 @@ import static map.RouteController.getAllRoutesRDD;
 import static map.RouteController.getEndPoint;
 import static map.RouteController.getStartPoint;
 
-public class GridController
-{
+public class GridController {
 
     static final String irregularGridFile = "/dynamicmap/irregularGrid.csv";
     static final String regularGridFile = "/dynamicmap/grid.csv";
     static final String boundaryKrakowLocation = "/dynamicmap/granicaKrakowa";
 
-    public static void createGrid()
-    {
-        //TODO:zrobic pisanie przez geosparka
-        //TODO:spytac jak obliczyc 250m?
-
+    public static void createGrid() {
         try {
             BufferedWriter writer = new BufferedWriter(new FileWriter(regularGridFile));
             GeometryFactory geometryFactory = new GeometryFactory();
@@ -60,44 +55,33 @@ public class GridController
                 writer.write(pointString);
             }
             writer.close();
-        }
-        catch(Exception ex)
-        {
+        } catch(Exception ex) {
             System.out.println(ex.getMessage());
         }
     }
 
-    public static List<Point> getGrid(boolean fitToRoadNetwork)
-    {
+    public static List<Point> getGrid(boolean fitToRoadNetwork) {
         String pointRDDInputLocation = irregularGridFile;
         if(!fitToRoadNetwork)
-        {
             pointRDDInputLocation = regularGridFile;
-        }
         int pointRDDOffset = 0;
         FileDataSplitter pointRDDSplitter = FileDataSplitter.CSV;
         PointRDD pointsRDD = new PointRDD(Application.sc, pointRDDInputLocation, pointRDDOffset, pointRDDSplitter, false);
         return pointsRDD.rawSpatialRDD.collect();
     }
 
-    static Map<Point, Double> getEmptyGrid(boolean fitToRoadNetwork)
-    {
+    static Map<Point, Double> getEmptyGrid(boolean fitToRoadNetwork) {
         List<Point> points = getGrid(fitToRoadNetwork);
         Map<Point, Double> emptyGrid = new HashMap<>();
         for (Point point : points)
-        {
             emptyGrid.put(point, 3000.0);
-        }
         return emptyGrid;
     }
 
-    static Map<Point, Double> getTimeGrid() throws Exception
-    {
+    static Map<Point, Double> getTimeGrid() throws Exception {
         List<Point> ambulances = Application.ambulances;
         if(ambulances.isEmpty())
-        {
             return getEmptyGrid(true);
-        }
         SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
 
         JavaRDD<Geometry> routesFromAmbulancesLocationRDD = allRoutesRDD.rawSpatialRDD
@@ -107,9 +91,7 @@ public class GridController
                 .map(RouteController::getStartPoint)
                 .distinct().count();
         if(foundAmbulanceCoordCount < ambulances.size())
-        {
             routesFromAmbulancesLocationRDD = downloadMissingData(ambulances, routesFromAmbulancesLocationRDD);
-        }
 
         JavaPairRDD<Point, Double> timeGrid = routesFromAmbulancesLocationRDD
                 .mapToPair(GridController::getPointTime)
@@ -118,8 +100,7 @@ public class GridController
     }
 
     private static JavaRDD<Geometry> downloadMissingData(List<Point> ambulances,
-                                                         JavaRDD<Geometry> routesFromAmbulancesLocationRDD) throws Exception
-    {
+                                                         JavaRDD<Geometry> routesFromAmbulancesLocationRDD) throws Exception {
         List<Point> foundAmbulances = routesFromAmbulancesLocationRDD
                 .map(RouteController::getStartPoint)
                 .distinct()
@@ -136,8 +117,7 @@ public class GridController
         return routesFromAmbulancesLocationRDD;
     }
 
-    private static Tuple2<Point, Double> getPointTime(Geometry route)
-    {
+    private static Tuple2<Point, Double> getPointTime(Geometry route) {
         Point point = getEndPoint(route);
         Double time = Double.valueOf(route.getUserData().toString());
         return new Tuple2<>(point, time);
