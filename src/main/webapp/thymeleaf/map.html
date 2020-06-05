@@ -131,7 +131,6 @@
             map.addInteraction(interaction);
             interaction.on('drawend', function(e){
                 var roadWKT = wktReader.writeFeature(e.feature, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' });
-		        console.log(roadWKT);
 		        $.ajax({
                     contentType: "application/json; charset=utf-8",
                     type: "POST",
@@ -183,8 +182,7 @@
                 });
                 selected = selected.concat(selectFeatures);
 		        var pointsWkt = wktReader.writeFeatures(selected, { dataProjection: 'EPSG:4326', featureProjection: 'EPSG:3857' });
-                console.log(pointsWkt);
-                /*$.ajax({
+                $.ajax({
                     contentType: "application/json; charset=utf-8",
                     type: "POST",
                     url: "/grid",
@@ -200,7 +198,7 @@
 			            console.log(textStatus);
 			            console.log(errorThrown);
                     }
-                });*/
+                });
             });
         }
     };

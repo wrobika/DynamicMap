@@ -102,7 +102,7 @@ public class MapController {
     }
 
     private static void saveTime(long start, long stop) throws IOException {
-        String timeFile = measures + "/n2c8g4_read";
+        String timeFile = measures + "/time";
         FileSystem hdfs = Application.hdfs;
         Path path = new Path(measures);
         if(!hdfs.exists(path))
