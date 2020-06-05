@@ -13,6 +13,7 @@ import java.util.*;
 
 import static map.RouteController.*;
 import static osrm.DownloadController.*;
+import static osrm.OsrmController.updateOSRM;
 
 public class UpdateController
 {
@@ -41,15 +42,15 @@ public class UpdateController
         List nodes = roadAndNodes._2;
         if(!nodes.isEmpty()) {
             LineString road = roadAndNodes._1;
-            //writeUpdateFile(road, nodes);
-            //updateOSRM();
+            writeUpdateFile(road, nodes);
+            updateOSRM();
             JavaRDD<Geometry> intersectedRoutesRDD = findIntersectedRoutes(road);
             intersectedRoutesRDD.cache();
-            System.out.println("\n\n\n\n" + intersectedRoutesRDD.count() + "\n\n\n\n");
-            /*JavaRDD<Geometry> newRoutesRDD = intersectedRoutesRDD.map(oldRoute ->
+            //System.out.println("\n\n\n\n" + intersectedRoutesRDD.count() + "\n\n\n\n");
+            JavaRDD<Geometry> newRoutesRDD = intersectedRoutesRDD.map(oldRoute ->
                 downloadOneRoute(getStartPoint(oldRoute), getEndPoint(oldRoute)));
             newRoutesRDD.cache();
-            replaceRoutes(intersectedRoutesRDD, newRoutesRDD);*/
+            replaceRoutes(intersectedRoutesRDD, newRoutesRDD);
         }
     }
 

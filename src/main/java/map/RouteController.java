@@ -31,7 +31,7 @@ public class RouteController {
 
     public static JavaRDD<Geometry> findIntersectedRoutes(LineString road) throws Exception {
         SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
-        return RangeQuery.SpatialRangeQuery(allRoutesRDD, road, true, false);
+        return RangeQuery.SpatialRangeQuery(allRoutesRDD, road.buffer(0.00002), true, false);
     }
 
     public static void replaceRoutes(JavaRDD<Geometry> elementsToReplaceRDD,
