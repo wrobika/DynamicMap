@@ -61,6 +61,7 @@ public class TestController {
     }
 
     @RequestMapping(value = "/testDownloadSwap")
+    @ResponseStatus(value = HttpStatus.OK)
     public void testDownloadAndSwap(@RequestParam String stringAmbulancePoints) throws IOException {
         String[] points = stringAmbulancePoints.split(",");
         for(String point : points) {
