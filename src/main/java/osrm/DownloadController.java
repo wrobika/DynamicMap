@@ -43,11 +43,12 @@ public class DownloadController {
                     downloadOneRoute(startPoint, endPoint));
 	        newRoutesRDD.cache();
             addNewRoutes(newRoutesRDD);
+	    newRoutesRDD.unpersist();
         }
     }
 
     static Geometry downloadOneRoute(Point start, Point end) throws Exception {
-	    Thread.sleep(38);
+	    Thread.sleep(18);
         List<Point> startEndPoints = Arrays.asList(start, end);
         String response = getRouteResponse(startEndPoints);
         return createLineStringRoute(response);
