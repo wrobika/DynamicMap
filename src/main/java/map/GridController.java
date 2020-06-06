@@ -86,7 +86,7 @@ public class GridController {
 
         JavaRDD<Geometry> routesFromAmbulancesLocationRDD = allRoutesRDD.rawSpatialRDD
                 .filter(route -> ambulances.contains(getStartPoint(route)));
-
+	routesFromAmbulancesLocationRDD.cache();
         long foundAmbulanceCoordCount = routesFromAmbulancesLocationRDD
                 .map(RouteController::getStartPoint)
                 .distinct().count();
@@ -105,7 +105,7 @@ public class GridController {
                 .map(RouteController::getStartPoint)
                 .distinct()
                 .collect();
-
+	routesFromAmbulancesLocationRDD.unpersist();
         List<Point> pointsToDownload = new ArrayList<>(ambulances);
         pointsToDownload.removeAll(foundAmbulances);
         DownloadController.downloadRoutes(pointsToDownload);

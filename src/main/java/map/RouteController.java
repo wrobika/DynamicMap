@@ -40,7 +40,8 @@ public class RouteController {
         JavaRDD<Geometry> subtractedRDD = allRoutesRDD.rawSpatialRDD
                 .subtract(elementsToReplaceRDD);
         JavaRDD<Geometry> replacedRDD = subtractedRDD.union(elementsReplacingRDD);
-        replacedRDD.saveAsTextFile(swapRoutesLocation);
+        replacedRDD.coalesce(8, true)
+		.saveAsTextFile(swapRoutesLocation);
         FileSystem hdfs = Application.hdfs;
         Path allRoutesPath = new Path(allRoutesLocation);
         Path swapRoutesPath = new Path(swapRoutesLocation);
@@ -51,7 +52,8 @@ public class RouteController {
     public static void addNewRoutes(JavaRDD<Geometry> newRoutesRDD) throws IOException {
         SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
         JavaRDD<Geometry> unionRDD = allRoutesRDD.rawSpatialRDD.union(newRoutesRDD);
-        unionRDD.saveAsTextFile(allRoutesLocation);
+        unionRDD.coalesce(8, true)
+		.saveAsTextFile(allRoutesLocation);
     }
 
     public static Point getStartPoint(Geometry route) {
