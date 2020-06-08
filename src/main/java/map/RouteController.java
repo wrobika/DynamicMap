@@ -40,7 +40,7 @@ public class RouteController {
         JavaRDD<Geometry> subtractedRDD = allRoutesRDD.rawSpatialRDD
                 .subtract(elementsToReplaceRDD);
         JavaRDD<Geometry> replacedRDD = subtractedRDD.union(elementsReplacingRDD);
-        replacedRDD.coalesce(8, true)
+        replacedRDD.coalesce(16, true)
 		.saveAsTextFile(swapRoutesLocation);
         FileSystem hdfs = Application.hdfs;
         Path allRoutesPath = new Path(allRoutesLocation);
@@ -52,7 +52,7 @@ public class RouteController {
     public static void addNewRoutes(JavaRDD<Geometry> newRoutesRDD) throws IOException {
         SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
         JavaRDD<Geometry> unionRDD = allRoutesRDD.rawSpatialRDD.union(newRoutesRDD);
-        unionRDD.coalesce(8, true)
+        unionRDD.coalesce(16, true)
 		.saveAsTextFile(allRoutesLocation);
     }
 
