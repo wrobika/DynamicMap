@@ -55,9 +55,12 @@ public class TestController {
 
     @RequestMapping(value = "/testUpdate")
     @ResponseStatus(value = HttpStatus.OK)
-    public void testUpdate(@RequestParam String roadToUpdate, @RequestParam int howManyTimes) {
-        for(int i = 0; i < howManyTimes; i++)
-            map.update(roadToUpdate);
+    public void testUpdate(@RequestParam String roadsToUpdate, @RequestParam int howManyTimes) {
+        for(int i = 0; i < howManyTimes; i++) {
+            String[] roads = roadsToUpdate.split(";");
+            for(String road : roads)
+		map.update(road);
+	}
     }
 
     @RequestMapping(value = "/testDownloadSwap")

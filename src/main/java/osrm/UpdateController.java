@@ -43,8 +43,8 @@ public class UpdateController
         if(!nodes.isEmpty()) {
             LineString road = roadAndNodes._1;
             writeUpdateFile(road, nodes);
-            //updateOSRM();
-            JavaRDD<Geometry> intersectedRoutesRDD = findIntersectedRoutes(road);
+            updateOSRM();
+            /*JavaRDD<Geometry> intersectedRoutesRDD = findIntersectedRoutes(road);
             intersectedRoutesRDD.cache();
             //System.out.println("\n\n\n\n" + intersectedRoutesRDD.count() + "\n\n\n\n");
             JavaRDD<Geometry> newRoutesRDD = intersectedRoutesRDD.map(oldRoute ->
@@ -52,7 +52,7 @@ public class UpdateController
             newRoutesRDD.cache();
             replaceRoutes(intersectedRoutesRDD, newRoutesRDD);
 	    intersectedRoutesRDD.unpersist();
-            newRoutesRDD.unpersist();
+            newRoutesRDD.unpersist();*/
         }
     }
 
