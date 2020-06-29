@@ -28,6 +28,8 @@ import static osrm.UpdateController.updateRoads;
 @Controller
 public class MapController {
 
+    private static long start;
+    private static long stop;
     private static String measures = "/dynamicmap/measures";
 
     @GetMapping("/map")
@@ -46,7 +48,7 @@ public class MapController {
     @RequestMapping(value = "/grid", method=RequestMethod.POST)
     public @ResponseBody
     Map<Point, Double> grid(@RequestBody String stringAmbulancePoints) {
-        long start = new Date().getTime();
+        start = new Date().getTime();
         GeometryFactory geometryFactory = new GeometryFactory();
         List<Point> ambulances = new ArrayList<>();
         WKTReader wktReader = new WKTReader();
@@ -68,7 +70,7 @@ public class MapController {
             }
             Application.ambulances = ambulances;
             timeGrid = getTimeGrid();
-            long stop = new Date().getTime();
+            stop = new Date().getTime();
             saveTime(start,stop);
         } catch(Exception ex) {
             ex.printStackTrace();
@@ -81,12 +83,12 @@ public class MapController {
     public @ResponseBody
     Map<Point, Double> update(@RequestBody String roadToUpdate) {
         try {
-            long start = new Date().getTime();
+            start = new Date().getTime();
             WKTReader wktReader = new WKTReader();
             Geometry geometry = wktReader.read(roadToUpdate);
             List<Coordinate> coordinates = Arrays.asList(geometry.getCoordinates());
             updateRoads(coordinates);
-            long stop = new Date().getTime();
+            stop = new Date().getTime();
             saveTime(start,stop);
             return getTimeGrid();
         } catch(Exception ex) {
