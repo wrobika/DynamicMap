@@ -4,6 +4,7 @@ import com.vividsolutions.jts.geom.*;
 import map.Application;
 import org.apache.hadoop.fs.*;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.storage.StorageLevel;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import scala.Tuple2;
@@ -45,13 +46,13 @@ public class UpdateController
             writeUpdateFile(road, nodes);
             //updateOSRM();
             JavaRDD<Geometry> intersectedRoutesRDD = findIntersectedRoutes(road);
-            intersectedRoutesRDD.cache();
+            intersectedRoutesRDD.persist(StorageLevel.MEMORY_AND_DISK());
             //System.out.println("\n\n\n\n" + intersectedRoutesRDD.count() + "\n\n\n\n");
             JavaRDD<Geometry> newRoutesRDD = intersectedRoutesRDD.map(oldRoute ->
                 downloadOneRoute(getStartPoint(oldRoute), getEndPoint(oldRoute)));
-            newRoutesRDD.cache();
+            newRoutesRDD.persist(StorageLevel.MEMORY_AND_DISK());
             replaceRoutes(intersectedRoutesRDD, newRoutesRDD);
-	    intersectedRoutesRDD.unpersist();
+	        intersectedRoutesRDD.unpersist();
             newRoutesRDD.unpersist();
         }
     }

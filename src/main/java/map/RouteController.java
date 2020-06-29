@@ -6,9 +6,11 @@ import com.vividsolutions.jts.geom.Point;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.storage.StorageLevel;
 import org.datasyslab.geospark.formatMapper.WktReader;
 import org.datasyslab.geospark.spatialOperator.RangeQuery;
 import org.datasyslab.geospark.spatialRDD.SpatialRDD;
+import scala.App;
 
 import java.io.IOException;
 import java.util.List;
@@ -26,34 +28,37 @@ public class RouteController {
             emptyRDD.setRawSpatialRDD(Application.sc.emptyRDD());
             return emptyRDD;
         }
-	    return WktReader.readToGeometryRDD(Application.sc, allRoutesLocation, 0, true, false);
+        SpatialRDD<Geometry> allRoutes = WktReader.readToGeometryRDD(Application.sc, allRoutesLocation, 0, true, false);
+        allRoutes.rawSpatialRDD.persist(StorageLevel.MEMORY_AND_DISK());
+        return allRoutes;
     }
 
     public static JavaRDD<Geometry> findIntersectedRoutes(LineString road) throws Exception {
-        SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
-        return RangeQuery.SpatialRangeQuery(allRoutesRDD, road.buffer(0.00002), true, false);
+        return RangeQuery.SpatialRangeQuery(
+                Application.allRoutes, road.buffer(0.00002), true, false);
     }
 
     public static void replaceRoutes(JavaRDD<Geometry> elementsToReplaceRDD,
                                      JavaRDD<Geometry> elementsReplacingRDD) throws IOException {
-        SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
-        JavaRDD<Geometry> subtractedRDD = allRoutesRDD.rawSpatialRDD
+        JavaRDD<Geometry> subtractedRDD = Application.allRoutes.rawSpatialRDD
                 .subtract(elementsToReplaceRDD);
         JavaRDD<Geometry> replacedRDD = subtractedRDD.union(elementsReplacingRDD);
         replacedRDD.coalesce(16, true)
-		.saveAsTextFile(swapRoutesLocation);
+		    .saveAsTextFile(swapRoutesLocation);
         FileSystem hdfs = Application.hdfs;
         Path allRoutesPath = new Path(allRoutesLocation);
         Path swapRoutesPath = new Path(swapRoutesLocation);
         hdfs.delete(allRoutesPath, true);
         hdfs.rename(swapRoutesPath, allRoutesPath);
+        Application.allRoutes = getAllRoutesRDD();
     }
 
     public static void addNewRoutes(JavaRDD<Geometry> newRoutesRDD) throws IOException {
-        SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
-        JavaRDD<Geometry> unionRDD = allRoutesRDD.rawSpatialRDD.union(newRoutesRDD);
+        JavaRDD<Geometry> unionRDD = Application.allRoutes.rawSpatialRDD
+                .union(newRoutesRDD);
         unionRDD.coalesce(16, true)
-		.saveAsTextFile(allRoutesLocation);
+		    .saveAsTextFile(allRoutesLocation);
+        Application.allRoutes = getAllRoutesRDD();
     }
 
     public static Point getStartPoint(Geometry route) {
