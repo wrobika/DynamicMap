@@ -11,6 +11,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.storage.StorageLevel;
 import org.geotools.geojson.geom.GeometryJSON;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -41,9 +42,9 @@ public class DownloadController {
             JavaRDD<Point> toDownloadRDD = Application.sc.parallelize(gridPoints);
             JavaRDD<Geometry> newRoutesRDD = toDownloadRDD.map(endPoint ->
                     downloadOneRoute(startPoint, endPoint));
-	        newRoutesRDD.cache();
+	        newRoutesRDD.persist(StorageLevel.MEMORY_AND_DISK());
             addNewRoutes(newRoutesRDD);
-	    newRoutesRDD.unpersist();
+	        newRoutesRDD.unpersist();
         }
     }
 

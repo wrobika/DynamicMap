@@ -9,6 +9,7 @@ import org.datasyslab.geospark.spatialRDD.PointRDD;
 import org.datasyslab.geospark.spatialRDD.PolygonRDD;
 import org.datasyslab.geospark.spatialRDD.SpatialRDD;
 import osrm.DownloadController;
+import scala.App;
 import scala.Tuple2;
 
 import java.io.BufferedWriter;
@@ -17,7 +18,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.lang.Math.cos;
-import static map.RouteController.getAllRoutesRDD;
 import static map.RouteController.getEndPoint;
 import static map.RouteController.getStartPoint;
 
@@ -82,9 +82,9 @@ public class GridController {
         List<Point> ambulances = Application.ambulances;
         if(ambulances.isEmpty())
             return getEmptyGrid(true);
-        SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
 
-        JavaRDD<Geometry> routesFromAmbulancesLocationRDD = allRoutesRDD.rawSpatialRDD
+        JavaRDD<Geometry> routesFromAmbulancesLocationRDD =
+                Application.allRoutes.rawSpatialRDD
                 .filter(route -> ambulances.contains(getStartPoint(route)));
 	routesFromAmbulancesLocationRDD.cache();
         long foundAmbulanceCoordCount = routesFromAmbulancesLocationRDD
@@ -110,9 +110,8 @@ public class GridController {
         pointsToDownload.removeAll(foundAmbulances);
         DownloadController.downloadRoutes(pointsToDownload);
 
-        SpatialRDD<Geometry> allRoutesRDD = getAllRoutesRDD();
         //lub nie filtrowac allRoutes na nowo, tylko dolaczyc pobrane do routesFromAmbulancePointsRDD
-        routesFromAmbulancesLocationRDD = allRoutesRDD.rawSpatialRDD
+        routesFromAmbulancesLocationRDD = Application.allRoutes.rawSpatialRDD
                 .filter(route -> ambulances.contains(getStartPoint(route)));
         return routesFromAmbulancesLocationRDD;
     }

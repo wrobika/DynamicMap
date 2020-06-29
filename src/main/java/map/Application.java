@@ -1,21 +1,24 @@
 package map;
 
+import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.Point;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.serializer.KryoSerializer;
+import org.apache.spark.storage.StorageLevel;
 import org.datasyslab.geospark.serde.GeoSparkKryoRegistrator;
+import org.datasyslab.geospark.spatialRDD.SpatialRDD;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import static osrm.OsrmController.startOSRM;
+import static map.RouteController.getAllRoutesRDD;
 
 @SpringBootApplication(scanBasePackages = { "map", "tests"} )
 public class Application {
@@ -23,6 +26,7 @@ public class Application {
     public static JavaSparkContext sc;
     public static List<Point> ambulances;
     public static FileSystem hdfs;
+    public static SpatialRDD<Geometry> allRoutes;
 
     public static void main(String[] args) throws Exception {
         SpringApplication.run(Application.class, args);
@@ -37,6 +41,7 @@ public class Application {
         sc = new JavaSparkContext(conf);
         ambulances = new ArrayList<>();
         hdfs = FileSystem.get(sc.hadoopConfiguration());
+        allRoutes = getAllRoutesRDD();
 
         //createGrid();
         copyRequiredFilesToHDFS();
