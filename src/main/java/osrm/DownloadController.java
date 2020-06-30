@@ -9,14 +9,11 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
-import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.storage.StorageLevel;
 import org.geotools.geojson.geom.GeometryJSON;
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.stereotype.Controller;
-import scala.Tuple2;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -35,6 +32,7 @@ public class DownloadController {
     private static final String routeServiceOSRM = "/route/v1/driving/";
     private static final String schemeOSRM = "http";
     private static final String hostOSRM = "localhost:5000";
+    private static GeometryFactory geometryFactory = new GeometryFactory();
 
     public static void downloadRoutes(List<Point> startPoints) throws Exception {
         List<Point> gridPoints = getGrid(false);
@@ -52,7 +50,7 @@ public class DownloadController {
 	    Thread.sleep(18);
         List<Point> startEndPoints = Arrays.asList(start, end);
         String response = getRouteResponse(startEndPoints);
-        return createLineStringRoute(response);
+        return createLineString(response, start, end);
     }
 
     static String getHttpResponse(String path, Map<String, String> parameters) throws Exception {
@@ -80,7 +78,7 @@ public class DownloadController {
         return getHttpResponse(path,parameters);
     }
 
-    private static LineString createLineStringRoute(String response) throws IOException {
+    private static LineString createLineString(String response, Point start, Point end) throws IOException {
         JSONObject responseJSON = new JSONObject(response);
         Double time = responseJSON
             .getJSONArray("routes")
@@ -93,6 +91,8 @@ public class DownloadController {
             .toString();
         GeometryJSON geometryJSON = new GeometryJSON();
         LineString route = geometryJSON.readLine(geometryString);
+        if(!route.getStartPoint().equals(start) || !route.getEndPoint().equals(end))
+            route = setProperStartEndPoints(route, start, end);
         route.setUserData(time);
         return route;
     }
@@ -120,4 +120,17 @@ public class DownloadController {
         result.deleteCharAt(result.length()-1);
         return result.toString();
     }
+
+    private static LineString setProperStartEndPoints(LineString route, Point start, Point end) {
+        System.out.println("\n\n\n\n" + route.getStartPoint().toText() + " " + start.toText() + "\n\n\n\n");
+        System.out.println("\n\n\n\n" + route.getEndPoint().toText() + " " + end.toText() + "\n\n\n\n");
+        CoordinateSequence coordSequence = route.getCoordinateSequence();
+        int size = coordSequence.size();
+        coordSequence.setOrdinate(0,0, start.getX());
+        coordSequence.setOrdinate(0,1, start.getY());
+        coordSequence.setOrdinate(size-1,0, end.getX());
+        coordSequence.setOrdinate(size-1,1, end.getY());
+        return geometryFactory.createLineString(coordSequence);
+    }
+
 }
