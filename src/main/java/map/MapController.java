@@ -3,13 +3,11 @@ package map;
 import com.vividsolutions.jts.geom.*;
 import com.vividsolutions.jts.geom.util.GeometryExtracter;
 import com.vividsolutions.jts.io.WKTReader;
-import org.apache.avro.generic.GenericData;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.util.Precision;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.spark.api.java.JavaRDD;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +16,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static map.GridController.getEmptyGrid;
 import static map.GridController.getTimeGrid;
@@ -30,6 +29,7 @@ public class MapController {
     private static long start;
     private static long stop;
     private static String measures = "/dynamicmap/measures";
+    private static GeometryFactory geometryFactory = new GeometryFactory();
 
     @GetMapping("/map")
     public String map(Model model) {
@@ -48,7 +48,6 @@ public class MapController {
     public @ResponseBody
     Map<Point, Double> grid(@RequestBody String stringAmbulancePoints) {
         start = new Date().getTime();
-        GeometryFactory geometryFactory = new GeometryFactory();
         List<Point> ambulances = new ArrayList<>();
         WKTReader wktReader = new WKTReader();
         Map<Point, Double> timeGrid;
@@ -59,13 +58,11 @@ public class MapController {
                 GeometryExtracter pointFilter = new GeometryExtracter(Point.class, points);
                 geometry.apply(pointFilter);
                 for (Point point : points) {
-                    Coordinate roundedCoord = roundCoordinate(point);
-                    ambulances.add(geometryFactory.createPoint(roundedCoord));
+                    ambulances.add(pointWithRoundedCoordinate(point));
                 }
             }
             else if(geometry instanceof Point) {
-                Coordinate roundedCoord = roundCoordinate((Point)geometry);
-                ambulances.add(geometryFactory.createPoint(roundedCoord));
+                ambulances.add(pointWithRoundedCoordinate((Point)geometry));
             }
             Application.ambulances = ambulances;
             timeGrid = getTimeGrid();
@@ -101,16 +98,19 @@ public class MapController {
     String gridSample(@RequestParam int size) {
         Map<Point, Double> grid = getEmptyGrid(true);
         List<Point> points = new ArrayList<>(grid.keySet());
+        List<Point> roundedCoordPoints = points.stream()
+                .map(MapController::pointWithRoundedCoordinate)
+                .collect(Collectors.toList());
         List sample = Application.sc
-                .parallelize(points)
+                .parallelize(roundedCoordPoints)
                 .take(size);
         return StringUtils.join(sample.toArray(), ",");
     }
 
-    private static Coordinate roundCoordinate(Point point){
+    private static Point pointWithRoundedCoordinate(Point point){
         Double x = Precision.round(point.getCoordinate().x, 6);
         Double y = Precision.round(point.getCoordinate().y, 6);
-        return new Coordinate(x,y);
+        return geometryFactory.createPoint(new Coordinate(x,y));
     }
 
     private static void saveTime(long start, long stop) throws IOException {
