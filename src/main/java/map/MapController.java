@@ -3,10 +3,13 @@ package map;
 import com.vividsolutions.jts.geom.*;
 import com.vividsolutions.jts.geom.util.GeometryExtracter;
 import com.vividsolutions.jts.io.WKTReader;
+import org.apache.avro.generic.GenericData;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.math3.util.Precision;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.spark.api.java.JavaRDD;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -14,11 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static map.GridController.getEmptyGrid;
 import static map.GridController.getTimeGrid;
@@ -95,6 +94,17 @@ public class MapController {
             ex.printStackTrace();
             return getEmptyGrid(true);
         }
+    }
+
+    @RequestMapping(value = "/gridSample", method=RequestMethod.GET)
+    public @ResponseBody
+    String gridSample(@RequestParam int size) {
+        Map<Point, Double> grid = getEmptyGrid(true);
+        List<Point> points = new ArrayList<>(grid.keySet());
+        List sample = Application.sc
+                .parallelize(points)
+                .take(size);
+        return StringUtils.join(sample.toArray(), ",");
     }
 
     private static Coordinate roundCoordinate(Point point){
