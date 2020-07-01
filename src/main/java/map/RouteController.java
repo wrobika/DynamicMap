@@ -56,9 +56,11 @@ public class RouteController {
     public static void addNewRoutes(JavaRDD<Geometry> newRoutesRDD) throws IOException {
         JavaRDD<Geometry> unionRDD = Application.allRoutes.rawSpatialRDD
                 .union(newRoutesRDD);
-        unionRDD.coalesce(16, true)
-		    .saveAsTextFile(allRoutesLocation);
-        Application.allRoutes = getAllRoutesRDD();
+        unionRDD.persist(StorageLevel.MEMORY_AND_DISK());
+        Application.allRoutes.setRawSpatialRDD(unionRDD);
+        //unionRDD.coalesce(16, true);
+		    //.saveAsTextFile(allRoutesLocation);
+        //Application.allRoutes = getAllRoutesRDD();
     }
 
     public static Point getStartPoint(Geometry route) {
