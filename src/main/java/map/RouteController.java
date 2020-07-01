@@ -58,8 +58,8 @@ public class RouteController {
                 .union(newRoutesRDD);
         unionRDD.cache();
         Application.allRoutes.setRawSpatialRDD(unionRDD);
-        unionRDD.coalesce(16, true)
-		    .saveAsTextFile(allRoutesLocation);
+        //unionRDD.coalesce(16, true)
+		    //.saveAsTextFile(allRoutesLocation);
         //Application.allRoutes = getAllRoutesRDD();
     }
 
