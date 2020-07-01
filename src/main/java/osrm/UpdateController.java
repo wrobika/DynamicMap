@@ -46,7 +46,7 @@ public class UpdateController
             writeUpdateFile(road, nodes);
             //updateOSRM();
             JavaRDD<Geometry> intersectedRoutesRDD = findIntersectedRoutes(road);
-            intersectedRoutesRDD.persist(StorageLevel.MEMORY_AND_DISK());
+            intersectedRoutesRDD.cache();
             System.out.println("\n\n\n\n" + intersectedRoutesRDD.count() + "\n\n\n\n");
             //JavaRDD<Geometry> newRoutesRDD = intersectedRoutesRDD.map(oldRoute ->
             //    downloadOneRoute(getStartPoint(oldRoute), getEndPoint(oldRoute)));
