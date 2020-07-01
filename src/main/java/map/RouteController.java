@@ -29,7 +29,7 @@ public class RouteController {
             return emptyRDD;
         }
         SpatialRDD<Geometry> allRoutes = WktReader.readToGeometryRDD(Application.sc, allRoutesLocation, 0, true, false);
-        allRoutes.rawSpatialRDD.persist(StorageLevel.MEMORY_AND_DISK());
+        allRoutes.rawSpatialRDD.persist(StorageLevel.MEMORY_ONLY());
         return allRoutes;
     }
 
@@ -56,7 +56,7 @@ public class RouteController {
     public static void addNewRoutes(JavaRDD<Geometry> newRoutesRDD) throws IOException {
         JavaRDD<Geometry> unionRDD = Application.allRoutes.rawSpatialRDD
                 .union(newRoutesRDD);
-        unionRDD.persist(StorageLevel.MEMORY_AND_DISK());
+        unionRDD.persist(StorageLevel.MEMORY_ONLY());
         Application.allRoutes.setRawSpatialRDD(unionRDD);
         //unionRDD.coalesce(16, true);
 		    //.saveAsTextFile(allRoutesLocation);
