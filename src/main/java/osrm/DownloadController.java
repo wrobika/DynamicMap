@@ -40,7 +40,7 @@ public class DownloadController {
             JavaRDD<Point> toDownloadRDD = Application.sc.parallelize(gridPoints);
             JavaRDD<Geometry> newRoutesRDD = toDownloadRDD.map(endPoint ->
                     downloadOneRoute(startPoint, endPoint));
-	        newRoutesRDD.persist(StorageLevel.MEMORY_AND_DISK());
+	        newRoutesRDD.persist(StorageLevel.MEMORY_ONLY());
             addNewRoutes(newRoutesRDD);
 	        newRoutesRDD.unpersist();
         }
