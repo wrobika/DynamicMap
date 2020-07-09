@@ -26,15 +26,15 @@ public class RouteController {
             return emptyRDD;
         }
         SpatialRDD<Geometry> allRoutes = WktReader.readToGeometryRDD(Application.sc, allRoutesLocation, 0, true, false);
-        allRoutes.setRawSpatialRDD(allRoutes.rawSpatialRDD.coalesce(8,true));
-        allRoutes.buildIndex(IndexType.RTREE, false);
+        //allRoutes.setRawSpatialRDD(allRoutes.rawSpatialRDD.coalesce(8,true));
+        allRoutes.buildIndex(IndexType.QUADTREE, false);
         allRoutes.rawSpatialRDD.cache();
         return allRoutes;
     }
 
     public static JavaRDD<Geometry> findIntersectedRoutes(LineString road) throws Exception {
         return RangeQuery.SpatialRangeQuery(
-                Application.allRoutes, road.buffer(0.00002), true, false);
+                Application.allRoutes, road.buffer(0.00002), true, true);
     }
 
     public static void replaceRoutes(JavaRDD<Geometry> elementsToReplaceRDD,
@@ -56,8 +56,8 @@ public class RouteController {
         JavaRDD<Geometry> unionRDD = Application.allRoutes.rawSpatialRDD
                 .union(newRoutesRDD);
         unionRDD.cache();
-        Application.allRoutes.setRawSpatialRDD(unionRDD.coalesce(8,true));
-        Application.allRoutes.buildIndex(IndexType.RTREE, false);
+        Application.allRoutes.setRawSpatialRDD(unionRDD.coalesce(16,true));
+        Application.allRoutes.buildIndex(IndexType.QUADTREE, false);
         //unionRDD.coalesce(16, true)
 		    //.saveAsTextFile(allRoutesLocation);
         //Application.allRoutes = getAllRoutesRDD();
