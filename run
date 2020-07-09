@@ -1,2 +1,2 @@
 #!/bin/bash
-/opt/spark/bin/spark-submit --class map.Application --master spark://master:7077 target/dynamic-map-0.1.0.jar
+/opt/spark/bin/spark-submit --class map.Application --master spark://master:7077 --executor-memory 4G target/dynamic-map-0.1.0.jar
