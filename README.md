@@ -7,4 +7,4 @@ Technologie:
 Java 8, Maven, Spring, GeoTools, Apache Spark, GeoSpark, OSRM
 ##
 All Rights Reserved  
-Copyright &copy; 2018 [Weronika Naziemiec](https://www.linkedin.com/in/weronika-naziemiec/)
+Copyright &copy; 2019 [Weronika Naziemiec](https://www.linkedin.com/in/weronika-naziemiec/)
